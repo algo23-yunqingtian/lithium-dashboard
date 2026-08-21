@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>碳酸锂月差分析</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#141420;color:#d0d0d8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-user-select:none;user-select:none}
+.header{background:#1a1a2e;border-bottom:1px solid #2a2a4a;padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:16px;color:#e0e0f0;font-weight:600}
+.header .subtitle{font-size:11px;color:#888;margin-left:10px}
+.header a{color:#8888cc;text-decoration:none;font-size:12px;margin-left:15px}
+.header a:hover{color:#aaaadd}
+.container{padding:12px;display:grid;grid-template-columns:1fr;gap:12px;max-width:1800px;margin:0 auto}
+.card{background:#1a1a2e;border:1px solid #2a2a4a;border-radius:6px;padding:12px}
+.card.full{grid-column:1/-1}
+.card h3{font-size:12px;color:#8888cc;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px}
+.chart{width:100%;height:320px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:12px}
+.stat-box{background:#12121e;border:1px solid #2a2a4a;border-radius:4px;padding:8px 10px}
+.stat-box .label{font-size:10px;color:#666;text-transform:uppercase}
+.stat-box .value{font-size:15px;color:#e0e0f0;font-weight:700;margin-top:2px}
+.stat-box .change{font-size:10px;margin-top:2px}
+.pos-color{color:#ff4444}
+.neg-color{color:#44ff44}
+.neutral-color{color:#888}
+.contango{color:#ffaa00}
+.backwardation{color:#44aaff}
+
+/* Tabs */
+.tab-bar{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
+.tab-btn{background:#12121e;border:1px solid #2a2a4a;color:#888;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:11px;transition:all .2s}
+.tab-btn:hover{border-color:#8888cc;color:#ccc}
+.tab-btn.active{background:#2a2a4a;border-color:#8888cc;color:#e0e0f0}
+
+/* Signal table */
+.signal-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
+.signal-table th{background:#12121e;color:#8888cc;padding:6px 8px;text-align:left;border-bottom:1px solid #2a2a4a;position:sticky;top:0}
+.signal-table td{padding:5px 8px;border-bottom:1px solid #1e1e30}
+.signal-table tr:hover td{background:#1e1e35}
+.signal-badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:600}
+.signal-positive_build{background:rgba(255,170,0,0.2);color:#ffaa00}
+.signal-positive_close{background:rgba(68,255,68,0.2);color:#44ff44}
+.signal-negative_build{background:rgba(68,170,255,0.2);color:#44aaff}
+.signal-negative_close{background:rgba(255,68,68,0.2);color:#ff4444}
+.signal-both_long,.signal-both_short{background:rgba(170,170,170,0.2);color:#aaa}
+.signal-neutral{background:rgba(100,100,100,0.2);color:#666}
+.table-wrap{overflow-x:auto;max-height:350px;overflow-y:auto}
+
+/* Position detail section */
+.pos-detail{margin-top:12px}
+.pos-detail h3{font-size:12px;color:#8888cc;margin-bottom:8px}
+.pos-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pos-card{background:#12121e;border:1px solid #2a2a4a;border-radius:6px;padding:10px}
+.pos-card .sym{font-size:13px;font-weight:700;color:#e0e0f0;margin-bottom:6px}
+.pos-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;font-size:11px}
+.pos-stats .item{background:#0a0a14;border-radius:3px;padding:4px 6px}
+.pos-stats .item .lbl{color:#666;font-size:9px}
+.pos-stats .item .val{color:#d0d0d8;font-weight:600;margin-top:1px}
+.pos-stats .item .val.pos{color:#ff4444}
+.pos-stats .item .val.neg{color:#44ff44}
+.pos-recent{margin-top:6px}
+.pos-recent table{width:100%;border-collapse:collapse;font-size:10px}
+.pos-recent th{color:#8888cc;padding:3px 4px;text-align:left;border-bottom:1px solid #1e1e30}
+.pos-recent td{padding:3px 4px;color:#aaa;border-bottom:1px solid #0e0e1a}
+
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.summary-card{background:#12121e;border:1px solid #2a2a4a;border-radius:6px;padding:10px}
+.summary-card h4{font-size:12px;color:#8888cc;margin-bottom:6px}
+.summary-card .meta{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;margin-bottom:6px}
+.summary-card .meta span{color:#888}
+.summary-card .meta b{color:#d0d0d8}
+.summary-card .signal-info{background:#0a0a14;border-radius:4px;padding:6px 8px;font-size:11px}
+
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:1200px){.two-col,.pos-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:baseline">
+    <h1>碳酸锂月差分析</h1>
+    <span class="subtitle">合约价差 + 多空持仓联动 + 正反套信号</span>
+  </div>
+  <div>
+    <a href="/">← 返回首页</a>
+    <a href="/lc_position_analysis.html">持仓分析 →</a>
+    <a href="/lc_seat_flow.html">席位流向 →</a>
+    <span style="font-size:10px;color:#666;margin-left:15px">数据来源: 广期所 / akshare</span>
+  </div>
+</div>
+
+<div class="container">
+  <!-- 月差概览 -->
+  <div class="card full">
+    <h3>月差概览 (最新)</h3>
+    <div class="stats" id="summaryCards"></div>
+  </div>
+
+  <!-- Tab 切换 -->
+  <div class="card full">
+    <div class="tab-bar" id="tabBar"></div>
+    <div id="tabContent"></div>
+  </div>
+</div>
+
+<script>const API_BASE = 'http://124.221.113.37:8766/lithium-api';
+
+var DATA_URL = API_BASE + '/spread_analysis?include_position=1';
+var allData = null;
+var activePairIdx = 0;
+
+// ============ 数据加载 ============
+async function loadData() {
+  try {
+    var resp = await fetch(DATA_URL);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    allData = await resp.json();
+    return allData;
+  } catch(e) {
+    console.error('加载失败:', e);
+    document.querySelector('.container').innerHTML = '<div class="card full"><h3>数据加载中...</h3></div>';
+    return null;
+  }
+}
+
+// ============ 渲染概览 ============
+function renderSummary(data) {
+  var el = document.getElementById('summaryCards');
+  var html = '';
+  var latestSummaries = data.latest_summary || [];
+  for (var i = 0; i < latestSummaries.length; i++) {
+    var s = latestSummaries[i];
+    var structureLabel = s.structure === 'contango' ? '正套结构 (升水)' : (s.structure === 'backwardation' ? '反套结构 (贴水)' : '未知');
+    var structureCls = s.structure === 'contango' ? 'contango' : (s.structure === 'backwardation' ? 'backwardation' : 'neutral-color');
+    var sigHtml = '';
+    if (s.latest_signal) {
+      var sig = s.latest_signal;
+      sigHtml = '<div class="signal-info">最新信号: <span class="signal-badge signal-' + sig.signal + '">' + sig.signal_cn + '</span><br>' + sig.explanation + '</div>';
+    }
+    var crossHtml = '';
+    if (s.latest_cross) {
+      crossHtml = '<div style="font-size:10px;color:#888;margin-top:4px">资金流向: ' + s.latest_cross.cross_desc + '</div>';
+    }
+    var wrInfo = '';
+    if (s.near_wr !== undefined && s.near_wr > 0) {
+      wrInfo = '<div style="font-size:10px;color:#888;margin-top:2px">仓单: ' + formatNum(s.near_wr) + ' / ' + formatNum(s.far_wr || 0) + '</div>';
+    }
+    html += '<div class="stat-box">' +
+      '<div class="label">' + s.pair_label + ' (价差)</div>' +
+      '<div class="value ' + (s.spread >= 0 ? 'pos-color' : 'neg-color') + '">' + Math.round(s.spread) + ' 点</div>' +
+      '<div class="change ' + (s.spread_change >= 0 ? 'pos-color' : 'neg-color') + '">' + (s.spread_change >= 0 ? '↑' : '↓') + ' ' + Math.round(Math.abs(s.spread_change)) + ' 点</div>' +
+      '<div class="change" style="margin-top:4px"><span class="' + structureCls + '">' + structureLabel + '</span></div>' +
+      sigHtml + crossHtml + wrInfo +
+      '</div>';
+  }
+  el.innerHTML = html;
+}
+
+// ============ Tab 系统 ============
+function renderTabs(data) {
+  var bar = document.getElementById('tabBar');
+  var contracts = data.spread_pairs || [];
+  var html = '';
+  for (var i = 0; i < contracts.length; i++) {
+    var sp = contracts[i];
+    var label = sp.pair_label || (sp.near.slice(-4) + '-' + sp.far.slice(-4));
+    var icon = sp.has_price ? '' : '📊';
+    html += '<button class="tab-btn' + (i === 0 ? ' active' : '') + '" data-idx="' + i + '" onclick="switchTab(' + i + ')">' + icon + label + '</button>';
+  }
+  bar.innerHTML = html;
+  activePairIdx = 0;
+  renderTabContent(data, 0);
+}
+
+function switchTab(idx) {
+  activePairIdx = idx;
+  var btns = document.querySelectorAll('.tab-btn');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].className = 'tab-btn' + (i === idx ? ' active' : '');
+  }
+  renderTabContent(allData, idx);
+}
+
+function renderTabContent(data, pairIdx) {
+  var container = document.getElementById('tabContent');
+  var contracts = data.spread_pairs || [];
+  if (pairIdx >= contracts.length) { container.innerHTML = '<p>无数据</p>'; return; }
+  
+  var sp = contracts[pairIdx];
+  var pairKey = sp.near + '-' + sp.far;
+  var signals = (data.signal_table && data.signal_table[pairKey]) ? data.signal_table[pairKey].signals : [];
+  var crossData = (data.position_cross && data.position_cross[pairKey]) ? data.position_cross[pairKey].data : [];
+  
+  var html = '';
+  
+  // 图表行: 月差走势 (有价格时显示)
+  if (sp.has_price && sp.data && sp.data.length > 0) {
+    html += '<div class="two-col">';
+    html += '<div><div class="chart" id="chartSpread"></div></div>';
+    html += '<div><div class="chart" id="chartPosition"></div></div>';
+    html += '</div>';
+  } else if (sp.has_position) {
+    // 无价格数据，只显示持仓叠加
+    html += '<div class="two-col">';
+    html += '<div><h3 style="font-size:11px;color:#8888cc;margin-bottom:6px">无价格数据 — 仅持仓叠加</h3></div>';
+    html += '<div><div class="chart" id="chartPosition"></div></div>';
+    html += '</div>';
+  } else {
+    html += '<p style="color:#666;padding:10px">该合约对暂无数据</p>';
+  }
+  
+  // 持仓详情区块 (近月 + 远月)
+  if (sp.has_position && sp.near_detail && sp.far_detail) {
+    html += renderPositionDetail(sp.near_detail, sp.far_detail);
+  }
+  
+  // 信号表
+  if (signals.length > 0) {
+    html += '<h3 style="margin-top:12px;font-size:12px;color:#8888cc">信号识别表</h3>';
+    html += '<div class="table-wrap"><table class="signal-table"><thead><tr>' +
+      '<th>日期</th><th>信号</th><th>强度</th><th>近月多增</th><th>近月空增</th>' +
+      '<th>远月多增</th><th>远月空增</th><th>近月持仓</th><th>远月持仓</th><th>说明</th>' +
+      '</tr></thead><tbody>';
+    
+    for (var i = signals.length - 1; i >= 0; i--) {
+      var sig = signals[i];
+      html += '<tr>' +
+        '<td>' + sig.date + '</td>' +
+        '<td><span class="signal-badge signal-' + sig.signal + '">' + sig.signal_cn + '</span></td>' +
+        '<td>' + (sig.strength === 'strong' ? '强' : (sig.strength === 'moderate' ? '中' : '弱')) + '</td>' +
+        '<td class="pos-color">' + (sig.near_long_chg > 0 ? '+' : '') + sig.near_long_chg.toLocaleString() + '</td>' +
+        '<td class="neg-color">' + (sig.near_short_chg > 0 ? '+' : '') + sig.near_short_chg.toLocaleString() + '</td>' +
+        '<td class="pos-color">' + (sig.far_long_chg > 0 ? '+' : '') + sig.far_long_chg.toLocaleString() + '</td>' +
+        '<td class="neg-color">' + (sig.far_short_chg > 0 ? '+' : '') + sig.far_short_chg.toLocaleString() + '</td>' +
+        '<td>' + sig.near_oi.toLocaleString() + '</td>' +
+        '<td>' + sig.far_oi.toLocaleString() + '</td>' +
+        '<td style="font-size:10px;color:#aaa">' + sig.explanation + '</td>' +
+        '</tr>';
+    }
+    html += '</tbody></table></div>';
+  } else {
+    html += '<h3 style="margin-top:12px;font-size:12px;color:#8888cc">信号识别表</h3>';
+    html += '<p style="color:#666;font-size:11px;padding:10px 0">暂无信号数据（持仓数据尚未覆盖该合约对）</p>';
+  }
+  
+  // 资金流向图
+  if (crossData.length > 0) {
+    html += '<h3 style="margin-top:12px;font-size:12px;color:#8888cc">资金流向 (总持仓变化)</h3>';
+    html += '<div class="chart" id="chartFlow" style="height:200px"></div>';
+  }
+  
+  container.innerHTML = html;
+  
+  // 初始化图表
+  setTimeout(function() {
+    if (sp.has_price && sp.data && sp.data.length > 0) {
+      renderSpreadChart(sp);
+    }
+    renderPositionChart(sp, signals);
+    renderFlowChart(crossData);
+  }, 50);
+}
+
+// ============ 持仓详情区块 ============
+function renderPositionDetail(nearDetail, farDetail) {
+  var html = '<div class="pos-detail">';
+  html += '<h3>持仓详情 — ' + nearDetail.symbol + ' vs ' + farDetail.symbol + '</h3>';
+  html += '<div class="pos-grid">';
+  html += renderContractCard(nearDetail, 'pos-color');
+  html += renderContractCard(farDetail, 'neg-color');
+  html += '</div></div>';
+  return html;
+}
+
+function renderContractCard(detail, colorClass) {
+  var html = '<div class="pos-card">';
+  html += '<div class="sym">' + detail.symbol + (detail.latest_date ? ' (截至 ' + detail.latest_date + ')' : '') + '</div>';
+  
+  // 最新持仓数据
+  html += '<div class="pos-stats">';
+  html += statItem('总持仓', formatNum(detail.latest_oi || 0));
+  html += statItem('多单', formatNum(detail.latest_long_oi || 0), colorClass);
+  html += statItem('空单', formatNum(detail.latest_short_oi || 0), detail.latest_short_oi > (detail.latest_long_oi || 0) ? 'pos-color' : '');
+  html += statItem('净持仓', formatNum(detail.latest_net || 0), (detail.latest_net || 0) >= 0 ? 'pos-color' : 'neg-color');
+  html += statItem('仓单', formatNum(detail.latest_wr || 0));
+  html += '</div>';
+  
+  // 最近10日持仓趋势 (小表)
+  if (detail.recent_10d && detail.recent_10d.length > 0) {
+    html += '<div class="pos-recent"><table><tr><th>日期</th><th>多</th><th>空</th><th>净</th></tr>';
+    for (var i = 0; i < detail.recent_10d.length; i++) {
+      var r = detail.recent_10d[i];
+      var nc = (r.net || 0) >= 0 ? 'pos-color' : 'neg-color';
+      html += '<tr><td>' + r.date + '</td><td class="pos-color">' + formatNum(r.long) + '</td>' +
+        '<td class="neg-color">' + formatNum(r.short) + '</td>' +
+        '<td class="' + nc + '">' + formatNum(r.net) + '</td></tr>';
+    }
+    html += '</table></div>';
+  }
+  
+  // 最近仓单 (如果有)
+  if (detail.recent_wr && detail.recent_wr.length > 0) {
+    html += '<div class="pos-recent"><table><tr><th>日期</th><th>仓单量</th></tr>';
+    for (var j = 0; j < detail.recent_wr.length; j++) {
+      html += '<tr><td>' + detail.recent_wr[j].date + '</td><td>' + formatNum(detail.recent_wr[j].qty) + '</td></tr>';
+    }
+    html += '</table></div>';
+  }
+  
+  html += '</div>';
+  return html;
+}
+
+function statItem(label, value, colorClass) {
+  var c = colorClass || '';
+  return '<div class="item"><div class="lbl">' + label + '</div><div class="val ' + c + '">' + value + '</div></div>';
+}
+
+function formatNum(n) {
+  if (n === null || n === undefined) return '-';
+  return Number(n).toLocaleString();
+}
+
+// ============ 图表1: 月差走势 ============
+function renderSpreadChart(sp) {
+  var dom = document.getElementById('chartSpread');
+  if (!dom) return;
+  echarts.getInstanceByDom(dom) && echarts.getInstanceByDom(dom).dispose();
+  dom.innerHTML = '';
+  var chart = echarts.init(dom, 'dark');
+  
+  var dates = [];
+  var spreads = [];
+  for (var i = 0; i < sp.data.length; i++) {
+    dates.push(sp.data[i].date);
+    spreads.push(sp.data[i].spread);
+  }
+  
+  chart.setOption({
+    tooltip: { trigger: 'axis', backgroundColor: '#1a1a2e', borderColor: '#2a2a4a', textStyle: { color: '#d0d0d8', fontSize: 11 } },
+    legend: { data: ['月差(点)', '零线'], textStyle: { color: '#888', fontSize: 10 }, top: 0 },
+    grid: { left: 55, right: 15, top: 35, bottom: 25 },
+    xAxis: { type: 'category', data: dates, axisLabel: { color: '#666', fontSize: 9, rotate: 30 }, axisLine: { lineStyle: { color: '#2a2a4a' } } },
+    yAxis: { type: 'value', name: '价差(点)', nameTextStyle: { color: '#666', fontSize: 10 }, axisLabel: { color: '#666', fontSize: 9 }, splitLine: { lineStyle: { color: '#1e1e30' } } },
+    series: [
+      {
+        name: '月差(点)', type: 'line', data: spreads, smooth: true, lineStyle: { width: 2 },
+        itemStyle: { color: '#ffaa00' },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(255,170,0,0.3)' },
+            { offset: 1, color: 'rgba(255,170,0,0.02)' }
+          ])
+        },
+        markLine: {
+          silent: true,
+          data: [{ yAxis: 0, lineStyle: { color: '#444', type: 'dashed', width: 1 } }],
+          label: { formatter: '零线', color: '#666', fontSize: 9, position: 'insideStartTop' }
+        }
+      },
+      {
+        name: '零线', type: 'line', data: new Array(dates.length).fill(0),
+        lineStyle: { color: '#444', type: 'dashed', width: 1 },
+        symbol: 'none'
+      }
+    ]
+  });
+}
+
+// ============ 图表2: 持仓叠加 ============
+function renderPositionChart(sp, signals) {
+  var dom = document.getElementById('chartPosition');
+  if (!dom) return;
+  echarts.getInstanceByDom(dom) && echarts.getInstanceByDom(dom).dispose();
+  dom.innerHTML = '';
+  var chart = echarts.init(dom, 'dark');
+  
+  if (!signals || signals.length === 0) {
+    // 没有信号数据，显示占位
+    chart.setOption({
+      tooltip: { show: false },
+      grid: { left: 15, right: 15, top: 40, bottom: 25 },
+      xAxis: { type: 'category', data: [], axisLabel: { color: '#666', fontSize: 9 } },
+      yAxis: { type: 'value', name: '持仓(手)', axisLabel: { color: '#666', fontSize: 9 } },
+      series: []
+    });
+    return;
+  }
+  
+  chart.setOption({
+    tooltip: { trigger: 'axis', backgroundColor: '#1a1a2e', borderColor: '#2a2a4a', textStyle: { color: '#d0d0d8', fontSize: 11 } },
+    legend: { data: [sp.near + ' 多', sp.near + ' 空', sp.far + ' 多', sp.far + ' 空'], textStyle: { color: '#888', fontSize: 10 }, top: 0 },
+    grid: { left: 55, right: 15, top: 35, bottom: 25 },
+    xAxis: { type: 'category', data: signals.map(function(s){return s.date;}), axisLabel: { color: '#666', fontSize: 9, rotate: 30 }, axisLine: { lineStyle: { color: '#2a2a4a' } } },
+    yAxis: { type: 'value', name: '持仓(手)', nameTextStyle: { color: '#666', fontSize: 10 }, axisLabel: { color: '#666', fontSize: 9 }, splitLine: { lineStyle: { color: '#1e1e30' } } },
+    series: [
+      { name: sp.near + ' 多', type: 'line', data: signals.map(function(s){return s.near_oi;}), smooth: true, lineStyle: { width: 2 }, itemStyle: { color: '#ff6644' } },
+      { name: sp.near + ' 空', type: 'line', data: signals.map(function(s){return s.near_short;}), smooth: true, lineStyle: { width: 2 }, itemStyle: { color: '#44cc44' } },
+      { name: sp.far + ' 多', type: 'line', data: signals.map(function(s){return s.far_oi;}), smooth: true, lineStyle: { width: 2, type: 'dashed' }, itemStyle: { color: '#ff8844' } },
+      { name: sp.far + ' 空', type: 'line', data: signals.map(function(s){return s.far_short;}), smooth: true, lineStyle: { width: 2, type: 'dashed' }, itemStyle: { color: '#44dd88' } }
+    ]
+  });
+}
+
+// ============ 图表3: 资金流向 ============
+function renderFlowChart(crossData) {
+  var dom = document.getElementById('chartFlow');
+  if (!dom) return;
+  echarts.getInstanceByDom(dom) && echarts.getInstanceByDom(dom).dispose();
+  dom.innerHTML = '';
+  var chart = echarts.init(dom, 'dark');
+  
+  if (crossData.length === 0) return;
+  
+  var dates = crossData.map(function(c){return c.date;});
+  var nearChg = crossData.map(function(c){return c.near_oi_chg;});
+  var farChg = crossData.map(function(c){return c.far_oi_chg;});
+  
+  chart.setOption({
+    tooltip: { trigger: 'axis', backgroundColor: '#1a1a2e', borderColor: '#2a2a4a', textStyle: { color: '#d0d0d8', fontSize: 11 } },
+    legend: { data: ['近月持仓变化', '远月持仓变化'], textStyle: { color: '#888', fontSize: 10 }, top: 0 },
+    grid: { left: 55, right: 15, top: 35, bottom: 25 },
+    xAxis: { type: 'category', data: dates, axisLabel: { color: '#666', fontSize: 9, rotate: 30 }, axisLine: { lineStyle: { color: '#2a2a4a' } } },
+    yAxis: { type: 'value', name: '变化(手)', nameTextStyle: { color: '#666', fontSize: 10 }, axisLabel: { color: '#666', fontSize: 9 }, splitLine: { lineStyle: { color: '#1e1e30' } } },
+    series: [
+      {
+        name: '近月持仓变化', type: 'bar', data: nearChg.map(function(v){
+          return { value: v, itemStyle: { color: v >= 0 ? 'rgba(255,102,68,0.6)' : 'rgba(68,204,68,0.6)' } };
+        }), barWidth: '40%'
+      },
+      {
+        name: '远月持仓变化', type: 'bar', data: farChg.map(function(v){
+          return { value: v, itemStyle: { color: v >= 0 ? 'rgba(255,136,68,0.6)' : 'rgba(68,221,136,0.6)' } };
+        }), barWidth: '40%'
+      }
+    ]
+  });
+}
+
+// ============ 启动 ============
+loadData().then(function(data) {
+  if (!data) return;
+  renderSummary(data);
+  renderTabs(data);
+}).catch(function(e) {
+  console.error('渲染失败:', e);
+});
+</script>
+</body>
+</html>

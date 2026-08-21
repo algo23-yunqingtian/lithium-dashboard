@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>碳酸锂 — 席位流向分析</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+:root {
+    --bg: #0b1220; --bg2: #111827; --bg3: #1a2235;
+    --border: #2a3452; --text: #c8d6e5; --dim: #636e85;
+    --up: #22c55e; --down: #ef4444; --accent: #3b82f6;
+    --gold: #f59e0b; --cyan: #06b6d4;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); min-height:100vh; }
+
+/* Anti-copy */
+[contextmenu],selectstart,dragstart,copy,cut,paste{user-select:none!important;-webkit-user-select:none!important;pointer-events:none!important;}
+body { -webkit-user-select:none; }
+body { -webkit-user-drag:none; }
+body { -khtml-user-select:none; }
+
+header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+header h1 { font-size: 18px; font-weight: 600; color: #f1f5f9; }
+header h1 span { color: var(--gold); margin-right: 8px; }
+header .subtitle { font-size: 12px; color: var(--dim); }
+header .refresh-btn { background: var(--accent); color: #fff; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+header .refresh-btn:hover { opacity: .85; }
+
+.date-bar { padding: 10px 24px; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.date-bar label { color: var(--dim); }
+.date-bar select { background: var(--bg3); color: var(--text); border: 1px solid var(--border); padding: 4px 10px; border-radius: 4px; font-size: 12px; }
+
+.tabs { display: flex; padding: 0 24px; background: var(--bg2); border-bottom: 1px solid var(--border); overflow-x: auto; }
+.tab { padding: 10px 18px; cursor: pointer; font-size: 13px; color: var(--dim); border-bottom: 2px solid transparent; white-space: nowrap; transition: all .2s; }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+.container { padding: 20px 24px; }
+
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.card h3 { font-size: 14px; font-weight: 600; color: #e2e8f0; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.kpi { background: var(--bg3); border-radius: 6px; padding: 12px; text-align: center; }
+.kpi .label { font-size: 11px; color: var(--dim); margin-bottom: 4px; }
+.kpi .value { font-size: 20px; font-weight: 700; }
+.kpi .delta { font-size: 11px; margin-top: 2px; }
+.up { color: var(--up); } .down { color: var(--down); }
+
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 960px) { .chart-row { grid-template-columns: 1fr; } }
+.chart-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+.chart-box h4 { font-size: 13px; color: #94a3b8; margin-bottom: 8px; }
+.chart { width: 100%; height: 300px; }
+.chart.full { height: 360px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { background: var(--bg3); color: var(--dim); font-weight: 600; padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+td { padding: 7px 10px; border-bottom: 1px solid #1e293b; }
+tr:hover td { background: rgba(59,130,246,.06); }
+.scroll-table { max-height: 400px; overflow-y: auto; }
+
+.loading { text-align: center; padding: 40px; color: var(--dim); font-size: 14px; }
+.loading::after { content: ''; display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-left: 10px; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1><span>📊</span>碳酸锂席位流向分析</h1>
+    <div class="subtitle">主力席位持仓追踪 · 多空博弈 · 61天数据覆盖</div>
+  </div>
+  <button class="refresh-btn" onclick="loadAll()">🔄 刷新</button>
+</header>
+
+<div class="date-bar">
+  <label>分析合约：</label>
+  <select id="contractSelect" onchange="changeContract()">
+    <option value="LC2609">LC2609（主力）</option>
+    <option value="LC2611">LC2611</option>
+    <option value="LC2612">LC2612</option>
+    <option value="LC2701">LC2701</option>
+    <option value="LC2705">LC2705</option>
+  </select>
+  <label style="margin-left:16px;">最新日期：<span id="latestDate" style="color:var(--accent)">加载中...</span></label>
+</div>
+
+<div class="tabs" id="tabs">
+  <div class="tab active" data-tab="overview" onclick="switchTab('overview')">① 总览</div>
+  <div class="tab" data-tab="multi" onclick="switchTab('multi')">② 多空对比</div>
+  <div class="tab" data-tab="trend" onclick="switchTab('trend')">③ 席位趋势</div>
+  <div class="tab" data-tab="detail" onclick="switchTab('detail')">④ 席位明细</div>
+</div>
+
+<div class="container" id="container">
+  <div class="loading" id="loading">加载数据中</div>
+</div>
+
+<script>const API_BASE = 'http://124.221.113.37:8766/lithium-api';
+
+let DATA = null;
+let charts = {};
+let currentTab = 'overview';
+let currentContract = 'LC2609';
+
+function disposeCharts() {
+    Object.values(charts).forEach(c => { if (c && !c.isDisposed()) c.dispose(); });
+    charts = {};
+}
+
+function initChart(id, opt) {
+    if (charts[id]) charts[id].dispose();
+    const dom = document.getElementById(id);
+    if (!dom) return null;
+    dom.innerHTML = '';
+    const c = echarts.init(dom, null, {renderer:'canvas'});
+    c.setOption(opt, true);
+    charts[id] = c;
+    return c;
+}
+
+function fmt(n) { return n.toLocaleString('zh-CN'); }
+function fmtShort(n) { if (Math.abs(n)>=1e4) return (n/1e4).toFixed(1)+'万'; return n.toString(); }
+function pct(chg, prev) { if (!prev) return 'N/A'; return (chg/prev*100).toFixed(1)+'%'; }
+function deltaStr(d) { return (d>=0?'+':'')+d.toLocaleString('zh-CN'); }
+
+const COLORS = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#06b6d4','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16','#e879f9'];
+
+async function loadAll() {
+    try {
+        const res = await fetch(API_BASE + '/lc_seat_flow');
+        DATA = await res.json();
+        document.getElementById('latestDate').textContent = DATA.all_dates[DATA.all_dates.length-1];
+        switchTab(currentTab);
+    } catch(e) {
+        document.getElementById('loading').textContent = '❌ 加载失败: ' + e.message;
+    }
+}
+
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    const container = document.getElementById('container');
+    if (!DATA) { container.innerHTML = '<div class="loading">加载中</div>'; return; }
+    disposeCharts();
+    switch(tab) {
+        case 'overview': renderOverview(container); break;
+        case 'multi': renderMulti(container); break;
+        case 'trend': renderTrend(container); break;
+        case 'detail': renderDetail(container); break;
+    }
+}
+
+function renderOverview(c) {
+    const d = DATA.all_dates[DATA.all_dates.length-1];
+    const sym = currentContract;
+    const daily = DATA.results[sym] || {};
+    const dayData = daily[d] || {};
+    const totalLong = Object.values(dayData).reduce((s,v)=>s+v.long_oi,0);
+    const totalShort = Object.values(dayData).reduce((s,v)=>s+v.short_oi,0);
+    
+    // Seat stats
+    const stats = DATA.seat_stats.slice(0, 10);
+    
+    // Recent changes for LC2609
+    const recent = DATA.multi_seat;
+    const lastLong = recent.top10_long[recent.top10_long.length-1] || 0;
+    const prevLong = recent.top10_long.length > 1 ? recent.top10_long[recent.top10_long.length-2] : lastLong;
+    const lastShort = recent.top10_short[recent.top10_short.length-1] || 0;
+    const prevShort = recent.top10_short.length > 1 ? recent.top10_short[recent.top10_short.length-2] : lastShort;
+    
+    c.innerHTML = `
+      <div class="kpi-grid">
+        <div class="kpi"><div class="label">合约</div><div class="value">${sym}</div></div>
+        <div class="kpi"><div class="label">数据日期</div><div class="value" style="font-size:15px">${d.slice(4)}</div></div>
+        <div class="kpi"><div class="label">前10总多头</div><div class="value">${fmtShort(lastLong)}</div><div class="delta ${lastLong>=prevLong?'up':'down'}">${deltaStr(lastLong-prevLong)}</div></div>
+        <div class="kpi"><div class="label">前10总空头</div><div class="value">${fmtShort(lastShort)}</div><div class="delta ${lastShort<=prevShort?'up':'down'}">${deltaStr(lastShort-prevShort)}</div></div>
+        <div class="kpi"><div class="label">净持仓</div><div class="value ${lastLong-lastShort>=0?'up':'down'}">${fmtShort(lastLong-lastShort)}</div></div>
+        <div class="kpi"><div class="label">总持仓</div><div class="value">${fmtShort(totalLong+totalShort)}</div></div>
+      </div>
+      
+      <div class="chart-row">
+        <div class="chart-box"><h4>前10席位持仓排名</h4><div class="chart" id="seatRankChart"></div></div>
+        <div class="chart-box"><h4>各席位近10日净增</h4><div class="chart" id="seatChangeChart"></div></div>
+      </div>
+      
+      <div class="card"><h3>主力席位长期排名 Top 10</h3>
+        <table><thead><tr><th>#</th><th>席位</th><th>平均多头</th><th>最大多头</th><th>活跃天数</th><th>日均增减</th></tr></thead><tbody>
+        ${stats.map((s,i)=>`<tr><td>${i+1}</td><td>${s.seat}</td><td>${fmt(s.avg_long)}</td><td>${fmt(s.max_long)}</td><td>${s.active_days}</td><td class="${s.avg_daily_chg>=0?'up':'down'}">${deltaStr(s.avg_daily_chg)}</td></tr>`).join('')}
+        </tbody></table>
+      </div>
+    `;
+    
+    setTimeout(()=>{
+        // Seat rank horizontal bar
+        const ranks = stats.map((s,i)=>({name:s.seat, value:s.avg_long, rank:i+1})).reverse();
+        initChart('seatRankChart', {
+            tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+            grid:{left:100,right:60,top:10,bottom:30},
+            xAxis:{type:'value',axisLabel:{formatter:v=>fmtShort(v),color:'#636e85'},splitLine:{lineStyle:{color:'#1e293b'}}},
+            yAxis:{type:'category',data:ranks.map(r=>r.name),axisLabel:{color:'#c8d6e5',fontSize:11}},
+            series:[{type:'bar',data:ranks.map((r,i)=>({value:r.value,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:COLORS[i%12]},{offset:1,color:COLORS[i%12]+'88'}])}})),barWidth:18,label:{show:true,position:'right',fontSize:10,color:'#94a3b8',formatter:p=>fmt(p.value)}}]
+        });
+        
+        // Seat recent change
+        const seatsData = DATA.recent_changes;
+        const seatNames = Object.keys(seatsData).slice(0,10);
+        const series = seatNames.map((name,i)=>({
+            name, type:'bar', data: seatsData[name].map(d=>d.daily_chg),
+            itemStyle:{color:COLORS[i%12], borderRadius:[3,3,0,0]}
+        }));
+        initChart('seatChangeChart', {
+            tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+            legend:{data:seatNames,textStyle:{color:'#636e85',fontSize:9},top:0,itemWidth:12,itemHeight:8},
+            grid:{left:65,right:10,top:30,bottom:25},
+            xAxis:{type:'value',axisLabel:{formatter:v=>fmtShort(v),color:'#636e85'},splitLine:{lineStyle:{color:'#1e293b'}}},
+            yAxis:{type:'category',data:seatNames.reverse(),axisLabel:{color:'#c8d6e5',fontSize:10}},
+            series: series.reverse()
+        });
+    }, 100);
+}
+
+function renderMulti(c) {
+    const m = DATA.multi_seat;
+    const dates = m.dates;
+    const lastIdx = dates.length - 1;
+    
+    c.innerHTML = `
+      <div class="chart-row">
+        <div class="chart-box"><h4>前10席位 多头 vs 空头</h4><div class="chart full" id="multiOIChart"></div></div>
+        <div class="chart-box"><h4>前10席位 日增减</h4><div class="chart full" id="multiChgChart"></div></div>
+      </div>
+    `;
+    
+    setTimeout(()=>{
+        // 滚动10日均值
+        function rolling(arr, w=5) {
+            return arr.map((_,i)=>{
+                const s = arr.slice(Math.max(0,i-w+1),i+1);
+                return Math.round(s.reduce((a,b)=>a+b,0)/s.length);
+            });
+        }
+        
+        initChart('multiOIChart', {
+            tooltip:{trigger:'axis'},
+            legend:{data:['多头合计','空头合计'],textStyle:{color:'#636e85'},top:0},
+            grid:{left:50,right:20,top:35,bottom:30},
+            xAxis:{type:'category',data:dates.map(d=>d.slice(4)),axisLine:{lineStyle:{color:'#3a4566'}},axisLabel:{color:'#636e85',fontSize:9,rotate:45}},
+            yAxis:{type:'value',splitLine:{lineStyle:{color:'#1e293b'}},axisLabel:{formatter:v=>fmtShort(v),color:'#636e85'}},
+            series:[
+                {name:'多头合计',type:'line',data:m.top10_long,smooth:true,showSymbol:false,lineStyle:{width:2,color:'#3b82f6'},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#3b82f640'},{offset:1,color:'#3b82f605'}])}},
+                {name:'空头合计',type:'line',data:m.top10_short,smooth:true,showSymbol:false,lineStyle:{width:2,color:'#ef4444'},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#ef444440'},{offset:1,color:'#ef444405'}])}}
+            ]
+        });
+        
+        initChart('multiChgChart', {
+            tooltip:{trigger:'axis'},
+            legend:{data:['多头增减','空头增减'],textStyle:{color:'#636e85'},top:0},
+            grid:{left:50,right:20,top:35,bottom:30},
+            xAxis:{type:'category',data:dates.map(d=>d.slice(4)),axisLine:{lineStyle:{color:'#3a4566'}},axisLabel:{color:'#636e85',fontSize:9,rotate:45}},
+            yAxis:{type:'value',splitLine:{lineStyle:{color:'#1e293b'}},axisLabel:{formatter:v=>fmtShort(v),color:'#636e85'}},
+            series:[
+                {name:'多头增减',type:'bar',data:m.top10_long_chg,itemStyle:{color:p=>p.value>=0?'#22c55e':'#ef4444'}},
+                {name:'空头增减',type:'bar',data:m.top10_short_chg,itemStyle:{color:p=>p.value>=0?'#22c55e':'#ef4444'}}
+            ]
+        });
+    }, 100);
+}
+
+function renderTrend(c) {
+    c.innerHTML = `
+      <div class="card"><h3>前10席位 多头持仓趋势（61天）</h3>
+        <div class="chart full" id="seatTrendChart"></div>
+      </div>
+      <div class="card"><h3>各席位 多空总持仓对比</h3>
+        <div class="chart" id="seatLongShortChart"></div>
+      </div>
+    `;
+    
+    setTimeout(()=>{
+        const d = DATA.all_dates[DATA.all_dates.length-1];
+        const sym = currentContract;
+        const daily = DATA.results[sym] || {};
+        const dayData = daily[d] || {};
+        
+        // Get seats that appear in top 10
+        const topSeats = Object.keys(dayData).slice(0, 10);
+        const allDates = DATA.all_dates.slice(-61); // last 61 days
+        
+        const series = topSeats.map((seat,i) => {
+            const trend = [];
+            for (const date of allDates) {
+                const sd = DATA.results[sym]?.[date]?.[seat];
+                trend.push(sd ? sd.long_oi : 0);
+            }
+            return { name: seat, type:'line', data:trend, smooth:true, showSymbol:false, lineStyle:{width:1.2, color:COLORS[i%12]}};
+        });
+        
+        initChart('seatTrendChart', {
+            tooltip:{trigger:'axis'},
+            legend:{data:topSeats, textStyle:{color:'#636e85',fontSize:10},top:0, itemWidth:12, itemHeight:6},
+            grid:{left:50,right:20,top:40,bottom:30},
+            xAxis:{type:'category',data:allDates.map(d=>d.slice(4)),axisLine:{lineStyle:{color:'#3a4566'}},axisLabel:{color:'#636e85',fontSize:9,rotate:45}},
+            yAxis:{type:'value',splitLine:{lineStyle:{color:'#1e293b'}},axisLabel:{formatter:v=>fmtShort(v),color:'#636e85'}},
+            series
+        });
+        
+        // Seat long vs short
+        const seatNames = Object.keys(dayData).slice(0,10).reverse();
+        const longs = seatNames.map(s => dayData[s]?.long_oi || 0);
+        const shorts = seatNames.map(s => dayData[s]?.short_oi || 0);
+        
+        initChart('seatLongShortChart', {
+            tooltip:{trigger:'axis'},
+            legend:{data:['多头','空头'],textStyle:{color:'#636e85'},top:0},
+            grid:{left:80,right:20,top:30,bottom:30},
+            xAxis:{type:'value',splitLine:{lineStyle:{color:'#1e293b'}},axisLabel:{formatter:v=>fmtShort(v),color:'#636e85'}},
+            yAxis:{type:'category',data:seatNames, axisLabel:{color:'#c8d6e5',fontSize:10}},
+            series:[
+                {name:'多头',type:'bar',data:longs,itemStyle:{color:'#3b82f6'},barWidth:14},
+                {name:'空头',type:'bar',data:shorts,itemStyle:{color:'#ef4444'},barWidth:14}
+            ]
+        });
+    }, 100);
+}
+
+function renderDetail(c) {
+    const d = DATA.all_dates[DATA.all_dates.length-1];
+    const sym = currentContract;
+    const daily = DATA.results[sym] || {};
+    const dayData = daily[d] || {};
+    
+    // Sort by long_oi desc
+    const sorted = Object.entries(dayData).sort((a,b) => b[1].long_oi - a[1].long_oi);
+    
+    let html = `
+      <div class="chart-box" style="margin-bottom:16px;"><h4>${sym} 席位排名明细 · ${d}</h4>
+        <div class="scroll-table"><table>
+        <thead><tr><th>排名</th><th>席位</th><th>多头持仓</th><th>日增减</th><th>空头持仓</th><th>日增减</th><th>净持仓</th></tr></thead>
+        <tbody>
+    `;
+    
+    sorted.forEach((entry, i) => {
+        const seat = entry[0];
+        const info = entry[1];
+        const net = info.long_oi - info.short_oi;
+        const lChgColor = info.long_oi_chg >= 0 ? 'up' : 'down';
+        const sChgColor = info.short_oi_chg >= 0 ? 'up' : 'down';
+        html += `<tr>
+            <td style="color:${i<3?'var(--gold)':'var(--dim)'};font-weight:${i<2?'700':'400'}">${info.rank}</td>
+            <td style="font-weight:600">${seat}</td>
+            <td>${fmt(info.long_oi)}</td>
+            <td class="${lChgColor}">${deltaStr(info.long_oi_chg)}</td>
+            <td>${fmt(info.short_oi)}</td>
+            <td class="${sChgColor}">${deltaStr(info.short_oi_chg)}</td>
+            <td class="${net>=0?'up':'down'}">${fmtShort(net)}</td>
+        </tr>`;
+    });
+    
+    html += `</tbody></table></div></div>`;
+    c.innerHTML = html;
+}
+
+function changeContract() {
+    currentContract = document.getElementById('contractSelect').value;
+    switchTab(currentTab);
+}
+
+// Resize
+window.addEventListener('resize', () => { Object.values(charts).forEach(c=>{if(c&&!c.isDisposed())c.resize();}); });
+
+// Init
+loadAll();
+document.addEventListener('keydown',e=>{ if(e.key==='F12'||(e.ctrlKey&&['c','s','p'].includes(e.key)))e.preventDefault(); });
+document.addEventListener('contextmenu',e=>e.preventDefault());
+</script>
+</body>
+</html>

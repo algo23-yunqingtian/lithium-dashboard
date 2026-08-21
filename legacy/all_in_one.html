@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>碳酸锂(LC)产业看板</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+:root{--bg:#111318;--card:#1a1d24;--card2:#22252e;--accent:#f97316;--text:#e8eaed;--text2:#9aa0b0;--green:#22c55e;--red:#ef4444;--yellow:#eab308;--blue:#3b82f6;--purple:#a855f7;--radius:8px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;user-select:none}
+input,textarea,button{user-select:auto}
+.header{background:linear-gradient(135deg,#1a1d24,#22252e);padding:16px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #ffffff15;flex-wrap:wrap;gap:8px}
+.header .logo{font-size:22px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header .sub{font-size:13px;color:var(--text2)}
+.header .price{font-size:28px;font-weight:700;color:var(--accent)}
+.header .price small{font-size:14px;font-weight:400;color:var(--text2);margin-left:8px}
+.container{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;max-width:1600px;margin:0 auto}
+.card{background:var(--card);border-radius:var(--radius);padding:16px;border:1px solid #ffffff08}
+.card h3{font-size:14px;color:var(--text2);margin-bottom:12px;font-weight:500}
+.card-full{grid-column:1/-1}
+.chart-box{width:100%;height:420px}
+.chart-box-sm{height:300px}
+/* 日历 */
+.calendar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.calendar-header button{background:var(--card2);border:1px solid #ffffff10;color:var(--text);padding:4px 12px;border-radius:4px;cursor:pointer;font-size:13px}
+.calendar-header button:hover{background:var(--accent);color:#fff}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-size:12px}
+.cal-grid .day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:4px;cursor:pointer;background:var(--card2);font-size:12px;padding:2px;min-height:36px;transition:all .15s}
+.cal-grid .day:hover{transform:scale(1.1);z-index:2}
+.cal-grid .day.other-month{opacity:.3}
+.cal-grid .day.note-bullish{background:var(--green);color:#000}
+.cal-grid .day.note-bearish{background:var(--red);color:#fff}
+.cal-grid .day.note-neutral{background:var(--yellow);color:#000}
+.cal-grid .day.selected{border:2px solid var(--accent);box-shadow:0 0 8px rgba(249,115,22,.4)}
+.cal-grid .day .dot{width:4px;height:4px;border-radius:50%;margin-top:1px}
+.cal-grid .weekday{color:var(--text2);font-size:11px;text-align:center;padding:4px 0}
+/* 笔记 */
+.notes-list{max-height:300px;overflow-y:auto;font-size:13px}
+.notes-list .note-item{padding:8px 10px;border-left:3px solid var(--accent);margin-bottom:6px;background:var(--card2);border-radius:0 4px 4px 0}
+.notes-list .note-item .date{font-size:11px;color:var(--text2)}
+.notes-list .note-item .title{font-weight:600;margin:2px 0}
+.notes-list .note-item .content{color:var(--text2);font-size:12px;line-height:1.5}
+.notes-list .note-item .sentiment{display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px;font-weight:600}
+.sentiment-bullish{background:var(--green);color:#000}
+.sentiment-bearish{background:var(--red);color:#fff}
+.sentiment-neutral{background:var(--yellow);color:#000}
+.note-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:13px}
+.note-form input,.note-form textarea,.note-form select{background:var(--card2);border:1px solid #ffffff15;color:var(--text);padding:6px 10px;border-radius:4px;font-size:13px;font-family:inherit}
+.note-form textarea{grid-column:1/-1;min-height:60px;resize:vertical}
+.note-form .full{grid-column:1/-1}
+.note-form button{grid-column:1/-1;background:var(--accent);color:#fff;border:none;padding:8px;border-radius:4px;cursor:pointer;font-weight:600}
+.note-form button:hover{opacity:.9}
+.note-form .btn-edit{background:var(--blue)}
+.note-form .btn-del{background:var(--red)}
+/* 主体 */
+.participant-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;font-size:12px}
+.participant-card{background:var(--card2);padding:10px;border-radius:4px;border-left:3px solid var(--accent)}
+.participant-card .name{font-weight:600;font-size:13px}
+.participant-card .role{color:var(--text2);font-size:11px}
+.participant-card .pos{font-size:12px;margin-top:4px}
+.participant-card .view{font-size:11px;color:var(--text2);margin-top:2px}
+/* 加载 */
+.loading{text-align:center;padding:40px;color:var(--text2);font-size:14px}
+.loading .spinner{width:32px;height:32px;border:3px solid var(--card2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* 标签 */
+.tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;margin-right:3px;background:var(--card2);color:var(--text2)}
+/* 删除按钮 */
+.del-btn{float:right;background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:0 4px}
+.del-btn:hover{opacity:.7}
+.edit-btn{float:right;background:none;border:none;color:var(--blue);cursor:pointer;font-size:14px;padding:0 4px;margin-right:4px}
+.edit-btn:hover{opacity:.7}
+/* 更新标 */
+.freshness{font-size:11px;color:var(--text2);text-align:right;padding:8px 12px 0 12px}
+/* 价格表 */
+.price-table{width:100%;font-size:12px;border-collapse:collapse}
+.price-table th{text-align:left;color:var(--text2);padding:4px 6px;border-bottom:1px solid #ffffff10;font-weight:500}
+.price-table td{padding:4px 6px;border-bottom:1px solid #ffffff05}
+.price-table tr:hover{background:var(--card2)}
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <div class="logo">碳酸锂产业看板</div>
+    <div class="sub">LC 主力合约 · 广州期货交易所</div>
+  </div>
+  <div class="price" id="headerPrice">— <small id="headerDate">加载中...</small></div>
+</div>
+<div class="freshness" id="freshness">数据更新：—</div>
+
+<div class="container" id="app">
+  <div class="loading card card-full" id="loading">
+    <div class="spinner"></div>
+    <div>加载数据中...</div>
+  </div>
+</div>
+
+<script>
+// ═══ Config ═══
+const API_BASE = 'http://124.221.113.37:8766/lithium-api';
+const COLORS = {green:'#22c55e',red:'#ef4444',yellow:'#eab308',blue:'#3b82f6',orange:'#f97316',purple:'#a855f7',cyan:'#06b6d4',pink:'#ec4899'};
+const DARK = {bg:'#111318',axis:'#22252e',text:'#9aa0b0',grid:'#1a1d24'};
+
+let DATA = null;
+let currentYear = new Date().getFullYear();
+let currentMonth = new Date().getMonth() + 1;
+let selectedDate = null;
+let editingNoteId = null;
+
+// ═══ Anti-copy ═══
+document.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('copy',e=>e.preventDefault());
+document.addEventListener('selectstart',e=>e.preventDefault());
+document.addEventListener('keydown',e=>{if(e.ctrlKey&&['c','C','u','U','s','S','a','A','p','P'].includes(e.key)||e.key==='F12')e.preventDefault()});
+
+// ═══ Load Data ═══
+async function loadData() {
+  try {
+    const resp = await fetch('data.json?_=' + Date.now());
+    DATA = await resp.json();
+    render();
+  } catch(e) {
+    document.getElementById('loading').innerHTML = '<div style="color:var(--red)">加载失败: ' + e.message + '</div>';
+  }
+}
+
+// ═══ Render ═══
+function render() {
+  const { prices, notes, periods, status, participants, participant_positions, agents, fundamental_indices, market_signals, inventory_history, spreads, contract_prices, cards, agent_history, _updated_at } = DATA;
+
+  // 最新价格
+  const last = prices[prices.length - 1];
+  if (last) {
+    document.getElementById('headerPrice').innerHTML = (last.close / 1000).toFixed(2) + 'k <small>' + last.date + '</small>';
+  }
+  document.getElementById('freshness').textContent = '数据更新: ' + (_updated_at || '') + ' | 最新K线: ' + (status?.last_price_date || '') + ' | 笔记: ' + (status?.note_count || 0) + '条';
+
+  // 构建DOM
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="card card-full">
+      <h3>📈 K线走势 <span style="font-size:11px;color:var(--text2);font-weight:400">LC主力合约 · 日线</span></h3>
+      <div class="chart-box" id="klineChart"></div>
+    </div>
+    <div class="card">
+      <h3>📅 笔记日历 <span style="font-size:11px;color:var(--text2);font-weight:400" id="monthLabel">${currentYear}-${String(currentMonth).padStart(2,'0')}</span></h3>
+      <div class="calendar-header">
+        <button onclick="changeMonth(-1)">◀</button>
+        <span id="monthTitle">${currentYear}年${currentMonth}月</span>
+        <button onclick="changeMonth(1)">▶</button>
+      </div>
+      <div class="cal-grid" id="calendarGrid"></div>
+    </div>
+    <div class="card">
+      <h3>📝 笔记 <span style="font-size:11px;color:var(--text2);font-weight:400" id="selectedDayLabel">点击日历日期</span></h3>
+      <div class="note-form" id="noteForm">
+        <input type="date" id="noteDate" />
+        <select id="noteSentiment"><option value="中性">中性</option><option value="利多">利多</option><option value="利空">利空</option></select>
+        <input type="text" id="noteTitle" placeholder="标题" class="full" />
+        <textarea id="noteContent" placeholder="笔记内容..."></textarea>
+        <input type="text" id="noteTags" placeholder="标签 (逗号分隔)" class="full" />
+        <button onclick="submitNote()" id="noteSubmitBtn">💾 保存笔记</button>
+      </div>
+      <div class="notes-list" id="notesContainer">
+        <div style="color:var(--text2);text-align:center;padding:20px;font-size:13px">点击日历上的日期查看笔记</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>📊 价差分析</h3>
+      <div class="chart-box-sm" id="spreadChart"></div>
+    </div>
+    <div class="card">
+      <h3>📊 期限结构</h3>
+      <div class="chart-box-sm" id="termStructureChart"></div>
+    </div>
+    <div class="card">
+      <h3>🏭 基本面指数</h3>
+      <div class="chart-box-sm" id="fundamentalChart"></div>
+    </div>
+    <div class="card">
+      <h3>📦 库存变化</h3>
+      <div class="chart-box-sm" id="inventoryChart"></div>
+    </div>
+    <div class="card">
+      <h3>🤖 博弈Agent <span style="font-size:11px;color:var(--text2);font-weight:400">持仓与观点</span></h3>
+      <div class="participant-grid" id="agentGrid"></div>
+    </div>
+    <div class="card">
+      <h3>📡 市场信号</h3>
+      <div class="chart-box-sm" id="signalChart"></div>
+    </div>
+    <div class="card card-full">
+      <h3>📋 近期合约价格</h3>
+      <div style="max-height:300px;overflow-y:auto" id="contractTable"></div>
+    </div>
+  `;
+
+  renderKline(prices, periods);
+  renderCalendar(notes, currentYear, currentMonth);
+  renderSpread(spreads);
+  renderTermStructure(contract_prices);
+  renderFundamental(fundamental_indices);
+  renderInventory(inventory_history);
+  renderAgents(agents, agent_history);
+  renderSignals(market_signals);
+  renderContractTable(contract_prices);
+  renderNotes(notes, selectedDate);
+}
+
+// ═══ K线图 ═══
+function renderKline(prices, periods) {
+  const chart = echarts.init(document.getElementById('klineChart'));
+  const dates = prices.map(p => p.date);
+  const ohlc = prices.map(p => [p.open, p.close, p.low, p.high]);
+  const vols = prices.map(p => p.volume);
+  const positions = prices.map(p => p.position);
+
+  // MA
+  const ma5 = calcMA(prices, 5);
+  const ma20 = calcMA(prices, 20);
+
+  chart.setOption({
+    backgroundColor: 'transparent',
+    tooltip: {trigger:'axis',axisPointer:{type:'cross'},backgroundColor:'#1a1d24',borderColor:'#ffffff15',textStyle:{color:'#e8eaed',fontSize:12}},
+    axisPointer:{link:[{xAxisIndex:'all'}],label:{backgroundColor:'#22252e'}},
+    grid:[{left:'5%',right:'5%',top:'8%',height:'55%'},{left:'5%',right:'5%',top:'70%',height:'12%'},{left:'5%',right:'5%',top:'85%',height:'10%'}],
+    xAxis:[{type:'category',data:dates,axisLine:{lineStyle:{color:'#22252e'}},axisLabel:{color:'#6b7080',fontSize:10},gridIndex:0,splitLine:{show:false}},
+           {type:'category',data:dates,axisLine:{lineStyle:{color:'#22252e'}},axisLabel:{show:false},gridIndex:1,splitLine:{show:false}},
+           {type:'category',data:dates,axisLine:{lineStyle:{color:'#22252e'}},axisLabel:{show:false},gridIndex:2,splitLine:{show:false}}],
+    yAxis:[{scale:true,gridIndex:0,splitLine:{lineStyle:{color:'#22252e',type:'dashed'}},axisLabel:{color:'#6b7080',fontSize:10}},
+           {scale:true,gridIndex:1,splitLine:{show:false},axisLabel:{show:false}},
+           {scale:true,gridIndex:2,splitLine:{show:false},axisLabel:{show:false}}],
+    visualMap:{show:false,seriesIndex:0,dimension:1,pieces:[{value:1,color:'var(--red)'},{value:-1,color:'var(--green)'}]},
+    series:[
+      {type:'candlestick',data:ohlc,itemStyle:{color:'var(--green)',color0:'var(--red)',borderColor:'var(--green)',borderColor0:'var(--red)'}},
+      {type:'line',data:ma5,smooth:true,lineStyle:{width:1,color:'#f97316'},symbol:'none',name:'MA5'},
+      {type:'line',data:ma20,smooth:true,lineStyle:{width:1,color:'#a855f7'},symbol:'none',name:'MA20'},
+      {type:'bar',data:vols,xAxisIndex:1,yAxisIndex:1,itemStyle:{color:'#3b82f6',opacity:.5},name:'成交量'},
+      {type:'bar',data:positions,xAxisIndex:2,yAxisIndex:2,itemStyle:{color:'#a855f7',opacity:.5},name:'持仓量'}
+    ],
+    dataZoom:[{type:'inside',xAxisIndex:[0,1,2],start:85,end:100},{type:'slider',xAxisIndex:[0,1,2],start:85,end:100,height:20,bottom:0,backgroundColor:'#1a1d24',borderColor:'#22252e',fillerColor:'#f9731630',handleStyle:{color:'#f97316'}}]
+  });
+  window.addEventListener('resize',()=>chart.resize());
+}
+
+function calcMA(prices, n) {
+  const r = [];
+  for (let i = 0; i < prices.length; i++) {
+    if (i < n - 1) { r.push('-'); continue; }
+    let s = 0;
+    for (let j = i - n + 1; j <= i; j++) s += prices[j].close;
+    r.push(Math.round(s / n));
+  }
+  return r;
+}
+
+// ═══ 日历 ═══
+function renderCalendar(notes, year, month) {
+  const grid = document.getElementById('calendarGrid');
+  if (!grid) return;
+  const firstDay = new Date(year, month - 1, 1).getDay();
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const daysInPrev = new Date(year, month - 1, 0).getDate();
+  const noteMap = {};
+  notes.forEach(n => { noteMap[n.date] = n; });
+
+  let html = '<div class="weekday">日</div><div class="weekday">一</div><div class="weekday">二</div><div class="weekday">三</div><div class="weekday">四</div><div class="weekday">五</div><div class="weekday">六</div>';
+
+  // 上月
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const d = daysInPrev - i;
+    const dateStr = `${year}-${String(month-1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    html += `<div class="day other-month" data-date="${dateStr}">${d}</div>`;
+  }
+  // 本月
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const note = noteMap[dateStr];
+    let cls = 'day';
+    if (note) cls += ' note-' + (note.sentiment === '利多' ? 'bullish' : note.sentiment === '利空' ? 'bearish' : 'neutral');
+    if (dateStr === selectedDate) cls += ' selected';
+    html += `<div class="${cls}" data-date="${dateStr}" onclick="selectDate('${dateStr}')">${d}</div>`;
+  }
+  // 下月
+  const totalCells = firstDay + daysInMonth;
+  const remaining = (7 - totalCells % 7) % 7;
+  for (let d = 1; d <= remaining; d++) {
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    html += `<div class="day other-month" data-date="${dateStr}">${d}</div>`;
+  }
+
+  grid.innerHTML = html;
+  document.getElementById('monthTitle').textContent = `${year}年${month}月`;
+  document.getElementById('monthLabel').textContent = `${year}-${String(month).padStart(2,'0')}`;
+}
+
+function changeMonth(delta) {
+  currentMonth += delta;
+  if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+  if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+  renderCalendar(DATA.notes, currentYear, currentMonth);
+}
+
+function selectDate(dateStr) {
+  selectedDate = dateStr;
+  document.getElementById('selectedDayLabel').textContent = dateStr;
+  document.getElementById('noteDate').value = dateStr;
+  renderCalendar(DATA.notes, currentYear, currentMonth);
+  renderNotes(DATA.notes, dateStr);
+}
+
+// ═══ 笔记 ═══
+function renderNotes(notes, dateStr) {
+  const container = document.getElementById('notesContainer');
+  if (!container) return;
+  if (!dateStr) { container.innerHTML = '<div style="color:var(--text2);text-align:center;padding:20px;font-size:13px">点击日历上的日期查看笔记</div>'; return; }
+  const dayNotes = notes.filter(n => n.date === dateStr);
+  if (dayNotes.length === 0) {
+    container.innerHTML = '<div style="color:var(--text2);text-align:center;padding:20px;font-size:13px">该日期暂无笔记</div>';
+    return;
+  }
+  let html = '';
+  dayNotes.forEach(n => {
+    const sentCls = n.sentiment === '利多' ? 'sentiment-bullish' : n.sentiment === '利空' ? 'sentiment-bearish' : 'sentiment-neutral';
+    html += `<div class="note-item">
+      <button class="del-btn" onclick="deleteNote(${n.id})">✕</button>
+      <button class="edit-btn" onclick="editNote(${n.id})">✎</button>
+      <div class="date">${n.date} <span class="sentiment ${sentCls}">${n.sentiment}</span></div>
+      <div class="title">${n.title || '无标题'}</div>
+      <div class="content">${(n.content || '').replace(/\n/g,'<br>')}</div>
+      ${n.tags ? '<div style="margin-top:4px">' + n.tags.split(',').map(t => `<span class="tag">${t.trim()}</span>`).join('') + '</div>' : ''}
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+async function submitNote() {
+  const date = document.getElementById('noteDate').value;
+  const title = document.getElementById('noteTitle').value;
+  const content = document.getElementById('noteContent').value;
+  const sentiment = document.getElementById('noteSentiment').value;
+  const tags = document.getElementById('noteTags').value;
+  if (!date || !content) { alert('请填写日期和内容'); return; }
+
+  const body = {date, title, content, sentiment, tags};
+  try {
+    let resp;
+    if (editingNoteId) {
+      resp = await fetch(`${API_BASE}/notes/${editingNoteId}`, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    } else {
+      resp = await fetch(`${API_BASE}/notes`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    }
+    if (resp.ok) {
+      editingNoteId = null;
+      document.getElementById('noteSubmitBtn').textContent = '💾 保存笔记';
+      // 重新加载数据
+      const resp2 = await fetch('data.json?_=' + Date.now());
+      DATA = await resp2.json();
+      renderNotes(DATA.notes, selectedDate);
+      renderCalendar(DATA.notes, currentYear, currentMonth);
+    } else {
+      alert('保存失败: ' + await resp.text());
+    }
+  } catch(e) {
+    alert('保存失败: ' + e.message);
+  }
+}
+
+function editNote(id) {
+  const note = DATA.notes.find(n => n.id === id);
+  if (!note) return;
+  document.getElementById('noteDate').value = note.date;
+  document.getElementById('noteTitle').value = note.title || '';
+  document.getElementById('noteContent').value = note.content || '';
+  document.getElementById('noteSentiment').value = note.sentiment || '中性';
+  document.getElementById('noteTags').value = note.tags || '';
+  editingNoteId = id;
+  document.getElementById('noteSubmitBtn').textContent = '✏️ 更新笔记';
+}
+
+async function deleteNote(id) {
+  if (!confirm('确定删除这条笔记？')) return;
+  try {
+    const resp = await fetch(`${API_BASE}/notes/${id}`, {method:'DELETE'});
+    if (resp.ok) {
+      const resp2 = await fetch('data.json?_=' + Date.now());
+      DATA = await resp2.json();
+      renderNotes(DATA.notes, selectedDate);
+      renderCalendar(DATA.notes, currentYear, currentMonth);
+    } else {
+      alert('删除失败');
+    }
+  } catch(e) {
+    alert('删除失败: ' + e.message);
+  }
+}
+
+// ═══ 价差图 ═══
+function renderSpread(spreads) {
+  if (!spreads || spreads.length === 0) return;
+  const chart = echarts.init(document.getElementById('spreadChart'));
+  // 取最近200条
+  const slice = spreads.slice(-200);
+  chart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'#1a1d24',borderColor:'#ffffff15',textStyle:{color:'#e8eaed'}},
+    grid:{left:'8%',right:'5%',top:'5%',bottom:'8%'},
+    xAxis:{type:'category',data:slice.map(s=>s.date),axisLine:{lineStyle:{color:'#22252e'}},axisLabel:{color:'#6b7080',fontSize:10,rotate:45}},
+    yAxis:{type:'value',splitLine:{lineStyle:{color:'#22252e',type:'dashed'}},axisLabel:{color:'#6b7080',fontSize:10}},
+    series:[{type:'line',data:slice.map(s=>s.spread),smooth:true,lineStyle:{width:1.5,color:'#3b82f6'},areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'#3b82f640'},{offset:1,color:'#3b82f605'}]}},symbol:'none',name:'价差'}]
+  });
+  window.addEventListener('resize',()=>chart.resize());
+}
+
+// ═══ 期限结构 ═══
+function renderTermStructure(contract_prices) {
+  if (!contract_prices || contract_prices.length === 0) return;
+  const chart = echarts.init(document.getElementById('termStructureChart'));
+  // 取最新日期
+  const dates = [...new Set(contract_prices.map(c=>c.date))].sort().slice(-5);
+  const colors = ['#f97316','#3b82f6','#22c55e','#a855f7','#ef4444'];
+  const series = dates.map((d,i) => {
+    const items = contract_prices.filter(c=>c.date===d).sort((a,b)=>a.contract.localeCompare(b.contract));
+    return {type:'line',data:items.map(c=>c.close),name:d,lineStyle:{width:1.5,color:colors[i%5]},symbol:'circle',symbolSize:4,itemStyle:{color:colors[i%5]}};
+  });
+  const contracts = [...new Set(contract_prices.filter(c=>c.date===dates[dates.length-1]).map(c=>c.contract))].sort();
+  chart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'#1a1d24',borderColor:'#ffffff15',textStyle:{color:'#e8eaed'}},
+    legend:{data:dates,textStyle:{color:'#9aa0b0',fontSize:11},top:0},
+    grid:{left:'5%',right:'5%',top:'15%',bottom:'8%'},
+    xAxis:{type:'category',data:contracts,axisLine:{lineStyle:{color:'#22252e'}},axisLabel:{color:'#6b7080',fontSize:10,rotate:30}},
+    yAxis:{type:'value',splitLine:{lineStyle:{color:'#22252e',type:'dashed'}},axisLabel:{color:'#6b7080',fontSize:10,formatter:v=>(v/1000).toFixed(1)+'k'}},
+    series
+  });
+  window.addEventListener('resize',()=>chart.resize());
+}
+
+// ═══ 基本面指数 ═══
+function renderFundamental(indices) {
+  if (!indices || indices.length === 0) return;
+  const chart = echarts.init(document.getElementById('fundamentalChart'));
+  const slice = indices.slice(-365);
+  const keys = ['supply','demand','inventory','profit','sentiment','basis','composite'];
+  const labels = ['供给','需求','库存','利润','情绪','基差','综合'];
+  const colors = ['#ef4444','#22c55e','#f97316','#a855f7','#eab308','#3b82f6','#06b6d4'];
+  chart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'#1a1d24',borderColor:'#ffffff15',textStyle:{color:'#e8eaed'}},
+    legend:{data:labels,textStyle:{color:'#9aa0b0',fontSize:10},top:0},
+    grid:{left:'5%',right:'5%',top:'15%',bottom:'8%'},
+    xAxis:{type:'category',data:slice.map(s=>s.date),axisLine:{lineStyle:{color:'#22252e'}},axisLabel:{color:'#6b7080',fontSize:9}},
+    yAxis:{type:'value',splitLine:{lineStyle:{color:'#22252e',type:'dashed'}},axisLabel:{color:'#6b7080',fontSize:10}},
+    series: keys.map((k,i) => ({
+      type:'line',name:labels[i],data:slice.map(s=>s[k]),smooth:true,
+      lineStyle:{width:1,color:colors[i]},symbol:'none',lineStyle:{width:1,color:colors[i],opacity:.7}
+    }))
+  });
+  window.addEventListener('resize',()=>chart.resize());
+}
+
+// ═══ 库存图 ═══
+function renderInventory(inv) {
+  if (!inv || inv.length === 0) return;
+  const chart = echarts.init(document.getElementById('inventoryChart'));
+  chart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'#1a1d24',borderColor:'#ffffff15',textStyle:{color:'#e8eaed'}},
+    grid:{left:'8%',right:'5%',top:'5%',bottom:'8%'},
+    xAxis:{type:'category',data:inv.map(s=>s.date),axisLine:{lineStyle:{color:'#22252e'}},axisLabel:{color:'#6b7080',fontSize:10,rotate:45}},
+    yAxis:[{type:'value',splitLine:{lineStyle:{color:'#22252e',type:'dashed'}},axisLabel:{color:'#6b7080',fontSize:10}},
+           {type:'value',splitLine:{show:false},axisLabel:{color:'#6b7080',fontSize:10}}],
+    series:[
+      {type:'bar',data:inv.map(s=>s.inventory),itemStyle:{color:'#3b82f6',opacity:.6},name:'库存'},
+      {type:'line',data:inv.map(s=>s.change),yAxisIndex:1,smooth:true,lineStyle:{width:1.5,color:'#f97316'},symbol:'none',name:'变化'}
+    ]
+  });
+  window.addEventListener('resize',()=>chart.resize());
+}
+
+// ═══ 市场信号 ═══
+function renderSignals(signals) {
+  if (!signals || signals.length === 0) return;
+  const chart = echarts.init(document.getElementById('signalChart'));
+  const slice = signals.slice(-200);
+  const signalNames = [...new Set(slice.map(s=>s.signal))];
+  const colors = ['#f97316','#3b82f6','#22c55e','#a855f7','#ef4444','#eab308','#06b6d4'];
+  const series = signalNames.map((name,i) => {
+    const items = slice.filter(s=>s.signal===name);
+    return {type:'line',name,data:items.map(s=>s.strength||0),smooth:true,lineStyle:{width:1,color:colors[i%7]},symbol:'none'};
+  });
+  chart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'#1a1d24',borderColor:'#ffffff15',textStyle:{color:'#e8eaed'}},
+    legend:{data:signalNames,textStyle:{color:'#9aa0b0',fontSize:10},top:0},
+    grid:{left:'5%',right:'5%',top:'15%',bottom:'8%'},
+    xAxis:{type:'category',data:slice.map(s=>s.date),axisLine:{lineStyle:{color:'#22252e'}},axisLabel:{color:'#6b7080',fontSize:9}},
+    yAxis:{type:'value',splitLine:{lineStyle:{color:'#22252e',type:'dashed'}},axisLabel:{color:'#6b7080',fontSize:10}},
+    series
+  });
+  window.addEventListener('resize',()=>chart.resize());
+}
+
+// ═══ Agent ═══
+function renderAgents(agents, history) {
+  const grid = document.getElementById('agentGrid');
+  if (!grid) return;
+  if (!agents || agents.length === 0) { grid.innerHTML = '<div style="color:var(--text2)">暂无数据</div>'; return; }
+  let html = '';
+  agents.forEach(a => {
+    const posColor = a.position > 0 ? 'var(--green)' : a.position < 0 ? 'var(--red)' : 'var(--text2)';
+    const viewColor = a.view_score > 50 ? 'var(--green)' : a.view_score < 30 ? 'var(--red)' : 'var(--yellow)';
+    html += `<div class="participant-card" style="border-left-color:${posColor}">
+      <div class="name">${a.name}</div>
+      <div class="role">${a.role || ''}</div>
+      <div class="pos">持仓: <b style="color:${posColor}">${a.position || 0}</b> | 资金: ${(a.capital/10000).toFixed(0)}w</div>
+      <div class="pos">成本: ${(a.avg_cost/1000).toFixed(2)}k | 观点: <b style="color:${viewColor}">${a.view_score||'--'}</b></div>
+      ${a.view_text ? '<div class="view">' + a.view_text.slice(0,80) + '...</div>' : ''}
+    </div>`;
+  });
+  grid.innerHTML = html;
+}
+
+// ═══ 合约表格 ═══
+function renderContractTable(contracts) {
+  const container = document.getElementById('contractTable');
+  if (!container) return;
+  if (!contracts || contracts.length === 0) { container.innerHTML = '<div style="color:var(--text2)">暂无数据</div>'; return; }
+  // 取最新日期
+  const dates = [...new Set(contracts.map(c=>c.date))].sort();
+  const latest = dates[dates.length - 1];
+  const items = contracts.filter(c=>c.date===latest).sort((a,b)=>a.contract.localeCompare(b.contract));
+  let html = '<table class="price-table"><tr><th>合约</th><th>开盘</th><th>收盘</th><th>成交量</th><th>持仓量</th></tr>';
+  items.forEach(c => {
+    html += `<tr><td>${c.contract}</td><td>${(c.open/1000).toFixed(2)}k</td><td>${(c.close/1000).toFixed(2)}k</td><td>${(c.volume/10000).toFixed(1)}w</td><td>${(c.position/10000).toFixed(1)}w</td></tr>`;
+  });
+  html += '</table>';
+  container.innerHTML = html;
+}
+
+// ═══ 启动 ═══
+loadData();
+</script>
+</body>
+</html>

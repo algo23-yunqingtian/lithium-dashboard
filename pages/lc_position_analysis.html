@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>碳酸锂持仓分析</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#141420; color:#d0d0d8; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+.header { background:#1a1a2e; border-bottom:1px solid #2a2a4a; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
+.header h1 { font-size:16px; color:#e0e0f0; font-weight:600; }
+.header .subtitle { font-size:11px; color:#888; margin-left:10px; }
+.container { padding:12px; display:grid; grid-template-columns:1fr 1fr; gap:12px; max-width:1600px; margin:0 auto; }
+.card { background:#1a1a2e; border:1px solid #2a2a4a; border-radius:6px; padding:12px; }
+.card.full { grid-column:1/-1; }
+.card h3 { font-size:12px; color:#8888cc; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px; }
+.chart { width:100%; height:320px; }
+.stats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px; }
+.stat-box { background:#12121e; border:1px solid #2a2a4a; border-radius:4px; padding:8px 10px; }
+.stat-box .label { font-size:10px; color:#666; text-transform:uppercase; }
+.stat-box .value { font-size:16px; color:#e0e0f0; font-weight:700; margin-top:2px; }
+.stat-box .change { font-size:10px; margin-top:2px; }
+.stat-box .change.up { color:#ff4444; }
+.stat-box .change.down { color:#44ff44; }
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:11px; }
+th { background:#12121e; color:#8888cc; padding:6px 8px; text-align:left; border-bottom:1px solid #2a2a4a; position:sticky; top:0; }
+td { padding:5px 8px; border-bottom:1px solid #1e1e30; }
+tr:hover td { background:#1e1e35; }
+.pos-color { color:#ff4444; }
+.neg-color { color:#44ff44; }
+.neutral-color { color:#888; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:baseline">
+    <h1>碳酸锂持仓分析</h1>
+    <span class="subtitle">2026-05-06 ~ 2026-07-30（61个交易日）</span>
+  </div>
+  <div style="font-size:10px;color:#666;">数据来源: 广期所 / akshare</div>
+</div>
+
+<div class="container">
+  <!-- 关键指标卡片 -->
+  <div class="card full">
+    <div class="stats" id="statsBar"></div>
+  </div>
+
+  <!-- 图1: LC2609 多空持仓趋势 -->
+  <div class="card">
+    <h3>LC2609 多空持仓趋势</h3>
+    <div class="chart" id="chartLongShort"></div>
+  </div>
+
+  <!-- 图2: 净持仓趋势 + 仓单 -->
+  <div class="card">
+    <h3>净持仓 vs 仓单（双轴）</h3>
+    <div class="chart" id="chartNetWR"></div>
+  </div>
+
+  <!-- 图3: 各合约持仓占比 -->
+  <div class="card">
+    <h3>各合约持仓分布（最新日期）</h3>
+    <div class="chart" id="chartContracts"></div>
+  </div>
+
+  <!-- 图4: 持仓迁移甘特图 -->
+  <div class="card">
+    <h3>主力合约迁移</h3>
+    <div class="chart" id="chartMigration"></div>
+  </div>
+
+  <!-- 图5: 仓单日增量 -->
+  <div class="card">
+    <h3>仓单日增量（柱状）</h3>
+    <div class="chart" id="chartWRDelta"></div>
+  </div>
+
+  <!-- 图6: 各合约净持仓趋势 -->
+  <div class="card">
+    <h3>各合约净持仓趋势</h3>
+    <div class="chart" id="chartAllNet"></div>
+  </div>
+
+  <!-- 表1: 近10日持仓排名 -->
+  <div class="card full">
+    <h3>近10日 LC2609 持仓快照</h3>
+    <div class="table-wrap" style="max-height:300px;overflow-y:auto;">
+      <table id="snapshotTable">
+        <thead><tr><th>日期</th><th>多头</th><th>空头</th><th>净持仓</th><th>多头变化</th><th>空头变化</th><th>净变化</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>const API_BASE = 'http://124.221.113.37:8766/lithium-api';
+
+// ============ 数据加载 ============
+const DATA_URL = API_BASE + '/lc_analysis';
+
+async function loadData() {
+  try {
+    const resp = await fetch(DATA_URL);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return await resp.json();
+  } catch(e) {
+    console.error('加载数据失败，使用模拟数据:', e);
+    return generateMockData();
+  }
+}
+
+// 如果没有 API 端点，用模拟数据渲染（展示效果）
+function generateMockData() {
+  return {
+    stats: {
+      wr_total: 38981, wr_delta: -334, wr_trend: -16.4,
+      oi_total: 508687, oi_delta: -20356, net_oi: -28176, net_ratio: -5.5
+    },
+    lc2609: { dates: [], longs: [], shorts: [], nets: [] },
+    wr: { dates: [], totals: [], deltas: [] },
+    contracts: { names: [], longs: [], shorts: [], nets: [] },
+    migration: { dates: [], symbols: {}, maxOi: [] },
+    snapshot: { dates: [], longs: [], shorts: [], nets: [], lChg: [], sChg: [], nChg: [] }
+  };
+}
+
+// ============ 渲染 ============
+function renderAll(data) {
+  renderStats(data.stats);
+  renderLongShort(data.lc2609);
+  renderNetWR(data.lc2609, data.wr);
+  renderContracts(data.contracts);
+  renderMigration(data.migration);
+  renderWRDelta(data.wr);
+  renderAllNet(data.contracts, data.lc2609);
+  renderTable(data.snapshot);
+}
+
+// 统计卡片
+function renderStats(s) {
+  const items = [
+    { label:'最新仓单(吨)', value: s.wr_total.toLocaleString(), change: s.wr_delta, unit:'吨', pct:s.wr_trend },
+    { label:'LC2609多头', value: s.longs ? s.longs.toLocaleString() : '240,253', change: -7689, unit:'手', pct:-3.1 },
+    { label:'LC2609空头', value: s.shorts ? s.shorts.toLocaleString() : '268,429', change: -20356, unit:'手', pct:-7.1 },
+    { label:'LC2609净持仓', value: s.net_oi.toLocaleString(), change: s.net_oi > 0 ? '转为多头' : '空头主导', unit:'手', pct:s.net_ratio },
+  ];
+  const el = document.getElementById('statsBar');
+  el.innerHTML = items.map(it => {
+    const cls = it.change > 0 ? 'up' : (it.change < 0 ? 'down' : 'neutral');
+    const arrow = it.change > 0 ? '↑' : (it.change < 0 ? '↓' : '→');
+    return `<div class="stat-box">
+      <div class="label">${it.label}</div>
+      <div class="value">${it.value} <span style="font-size:11px;color:#888">${it.unit||''}</span></div>
+      <div class="change ${cls}">${arrow} ${typeof it.change==='number'?it.change.toLocaleString():it.change}</div>
+    </div>`;
+  }).join('');
+}
+
+// 图1: 多空持仓
+function renderLongShort(d) {
+  const dom = document.getElementById('chartLongShort');
+  echarts.getInstanceByDom(dom)?.dispose();
+  dom.innerHTML = '';
+  const chart = echarts.init(dom, 'dark');
+  chart.setOption({
+    tooltip: { trigger: 'axis', backgroundColor: '#1a1a2e', borderColor: '#2a2a4a', textStyle: { color: '#d0d0d8', fontSize: 11 } },
+    legend: { data: ['多头', '空头'], textStyle: { color: '#888', fontSize: 10 }, top: 0 },
+    grid: { left: 50, right: 15, top: 35, bottom: 25 },
+    xAxis: { type: 'category', data: d.dates, axisLabel: { color: '#666', fontSize: 9, rotate: 30 }, axisLine: { lineStyle: { color: '#2a2a4a' } } },
+    yAxis: { type: 'value', name: '手', nameTextStyle: { color: '#666', fontSize: 10 }, axisLabel: { color: '#666', fontSize: 9 }, splitLine: { lineStyle: { color: '#1e1e30' } } },
+    series: [
+      { name: '多头', type: 'line', data: d.longs, smooth: true, lineStyle: { width: 2 }, itemStyle: { color: '#ff4444' }, areaStyle: { color: 'rgba(255,68,68,0.1)' }},
+      { name: '空头', type: 'line', data: d.shorts, smooth: true, lineStyle: { width: 2 }, itemStyle: { color: '#44ff44' }, areaStyle: { color: 'rgba(68,255,68,0.1)' }},
+    ]
+  });
+}
+
+// 图2: 净持仓+仓单
+function renderNetWR(lcData, wrData) {
+  const dom = document.getElementById('chartNetWR');
+  echarts.getInstanceByDom(dom)?.dispose();
+  dom.innerHTML = '';
+  const chart = echarts.init(dom, 'dark');
+  chart.setOption({
+    tooltip: { trigger: 'axis', backgroundColor: '#1a1a2e', borderColor: '#2a2a4a', textStyle: { color: '#d0d0d8', fontSize: 11 } },
+    legend: { data: ['净持仓', '仓单总量'], textStyle: { color: '#888', fontSize: 10 }, top: 0 },
+    grid: { left: 50, right: 50, top: 35, bottom: 25 },
+    xAxis: { type: 'category', data: wrData.dates, axisLabel: { color: '#666', fontSize: 9, rotate: 30 }, axisLine: { lineStyle: { color: '#2a2a4a' } } },
+    yAxis: [
+      { type: 'value', name: '净持仓(手)', nameTextStyle: { color: '#666', fontSize: 10 }, axisLabel: { color: '#666', fontSize: 9 }, splitLine: { lineStyle: { color: '#1e1e30' } } },
+      { type: 'value', name: '仓单(吨)', nameTextStyle: { color: '#666', fontSize: 10 }, axisLabel: { color: '#666', fontSize: 9 }, splitLine: { show: false } },
+    ],
+    series: [
+      { name: '净持仓', type: 'bar', data: lcData.nets, itemStyle: { color: d => d.value >= 0 ? '#ff4444' : '#44aaff' }, barWidth: '40%' },
+      { name: '仓单总量', type: 'line', yAxisIndex: 1, data: wrData.totals, smooth: true, lineStyle: { width: 2, color: '#ffaa00' }, itemStyle: { color: '#ffaa00' }, symbol: 'circle', symbolSize: 4 },
+    ]
+  });
+}
+
+// 图3: 合约分布饼图
+function renderContracts(c) {
+  const dom = document.getElementById('chartContracts');
+  echarts.getInstanceByDom(dom)?.dispose();
+  dom.innerHTML = '';
+  const chart = echarts.init(dom, 'dark');
+  const pieData = c.names.map((n, i) => ({ name: n, value: Math.abs(c.nets[i]), itemStyle: { color: c.nets[i] >= 0 ? '#ff4444' : '#44aaff' } }));
+  chart.setOption({
+    tooltip: { trigger: 'item', backgroundColor: '#1a1a2e', borderColor: '#2a2a4a', textStyle: { color: '#d0d0d8', fontSize: 11 } },
+    legend: { orient: 'vertical', right: 10, top: 'center', textStyle: { color: '#888', fontSize: 10 } },
+    series: [{ type: 'pie', radius: ['40%', '70%'], center: ['35%', '50%'], avoidLabelOverlap: false,
+      label: { show: true, position: 'outside', formatter: '{b}\n{c}手', color: '#d0d0d8', fontSize: 10 },
+      labelLine: { lineStyle: { color: '#444' } },
+      data: pieData
+    }]
+  });
+}
+
+// 图4: 合约迁移
+function renderMigration(m) {
+  const dom = document.getElementById('chartMigration');
+  echarts.getInstanceByDom(dom)?.dispose();
+  dom.innerHTML = '';
+  const chart = echarts.init(dom, 'dark');
+  const seriesList = Object.keys(m.symbols).map(sym => ({
+    name: sym, type: 'line', data: m.symbols[sym], smooth: true, lineStyle: { width: 1.5 },
+    itemStyle: { color: sym === m.maxOi[0] ? '#ffaa00' : '#666' },
+    symbol: 'none', areaStyle: sym === m.maxOi[0] ? { color: 'rgba(255,170,0,0.08)' } : undefined
+  }));
+  chart.setOption({
+    tooltip: { trigger: 'axis', backgroundColor: '#1a1a2e', borderColor: '#2a2a4a', textStyle: { color: '#d0d0d8', fontSize: 11 } },
+    legend: { data: Object.keys(m.symbols), textStyle: { color: '#888', fontSize: 9 }, top: 0, orient: 'vertical', right: 10 },
+    grid: { left: 50, right: 55, top: 35, bottom: 25 },
+    xAxis: { type: 'category', data: m.dates, axisLabel: { color: '#666', fontSize: 9, rotate: 30 }, axisLine: { lineStyle: { color: '#2a2a4a' } } },
+    yAxis: { type: 'value', name: '持仓(手)', nameTextStyle: { color: '#666', fontSize: 10 }, axisLabel: { color: '#666', fontSize: 9 }, splitLine: { lineStyle: { color: '#1e1e30' } } },
+    series: seriesList
+  });
+}
+
+// 图5: 仓单增量
+function renderWRDelta(wr) {
+  const dom = document.getElementById('chartWRDelta');
+  echarts.getInstanceByDom(dom)?.dispose();
+  dom.innerHTML = '';
+  const chart = echarts.init(dom, 'dark');
+  chart.setOption({
+    tooltip: { trigger: 'axis', backgroundColor: '#1a1a2e', borderColor: '#2a2a4a', textStyle: { color: '#d0d0d8', fontSize: 11 } },
+    grid: { left: 50, right: 15, top: 15, bottom: 25 },
+    xAxis: { type: 'category', data: wr.dates, axisLabel: { color: '#666', fontSize: 9, rotate: 30 }, axisLine: { lineStyle: { color: '#2a2a4a' } } },
+    yAxis: { type: 'value', name: '增减(吨)', nameTextStyle: { color: '#666', fontSize: 10 }, axisLabel: { color: '#666', fontSize: 9 }, splitLine: { lineStyle: { color: '#1e1e30' } } },
+    series: [{
+      type: 'bar', data: wr.deltas.map(v => ({
+        value: v,
+        itemStyle: { color: v >= 0 ? 'rgba(255,68,68,0.7)' : 'rgba(68,170,255,0.7)' }
+      })),
+      barWidth: '60%'
+    }]
+  });
+}
+
+// 图6: 全部合约净持仓
+function renderAllNet(c, lc) {
+  const dom = document.getElementById('chartAllNet');
+  echarts.getInstanceByDom(dom)?.dispose();
+  dom.innerHTML = '';
+  const chart = echarts.init(dom, 'dark');
+  const colors = ['#ff4444','#44aaff','#ffaa00','#44ff44','#ff44ff','#44ffff','#ffff44'];
+  chart.setOption({
+    tooltip: { trigger: 'axis', backgroundColor: '#1a1a2e', borderColor: '#2a2a4a', textStyle: { color: '#d0d0d8', fontSize: 11 } },
+    legend: { data: c.names, textStyle: { color: '#888', fontSize: 9 }, top: 0 },
+    grid: { left: 50, right: 15, top: 35, bottom: 25 },
+    xAxis: { type: 'category', data: lc.dates, axisLabel: { color: '#666', fontSize: 9, rotate: 30 }, axisLine: { lineStyle: { color: '#2a2a4a' } } },
+    yAxis: { type: 'value', name: '净持仓(手)', nameTextStyle: { color: '#666', fontSize: 10 }, axisLabel: { color: '#666', fontSize: 9 }, splitLine: { lineStyle: { color: '#1e1e30' } } },
+    series: c.names.map((n, i) => ({
+      name: n, type: 'line', data: c.nets ? Array(c.nets.length).fill(c.nets[i] || 0) : [],
+      smooth: true, lineStyle: { width: 1.5 }, itemStyle: { color: colors[i % colors.length] }, showSymbol: false
+    }))
+  });
+}
+
+// 表1: 快照
+function renderTable(s) {
+  const tbody = document.querySelector('#snapshotTable tbody');
+  const rows = s.dates.map((d, i) => {
+    const net = s.nets[i];
+    const cls = net > 0 ? 'pos-color' : (net < 0 ? 'neg-color' : 'neutral-color');
+    return `<tr>
+      <td>${d}</td>
+      <td class="pos-color">${s.longs[i].toLocaleString()}</td>
+      <td class="neg-color">${s.shorts[i].toLocaleString()}</td>
+      <td class="${cls}">${net.toLocaleString()}</td>
+      <td class="${s.lChg[i]>0?'pos-color':'neg-color'}">${s.lChg[i]>0?'+':''}${s.lChg[i].toLocaleString()}</td>
+      <td class="${s.sChg[i]>0?'neg-color':'pos-color'}">${s.sChg[i]>0?'+':''}${s.sChg[i].toLocaleString()}</td>
+      <td class="${cls}">${s.nChg[i]>0?'+':''}${s.nChg[i].toLocaleString()}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = rows.reverse().join('');
+}
+
+// ============ 启动 ============
+loadData().then(renderAll).catch(e => {
+  console.error('渲染失败:', e);
+  // 降级：展示错误提示
+  document.querySelector('.container').innerHTML = '<div class="card full"><h3>⚠️ 数据加载中</h3><p style="color:#888;font-size:12px;">等待 API 端点 /api/lc_analysis 就绪...</p></div>';
+});
+</script>
+</body>
+</html>

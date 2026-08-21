@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🔋 锂矿海外时序数据</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px}
+.header{background:linear-gradient(90deg,#16213e,#0f3460);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #e94560}
+.header h1{font-size:20px;color:#fff}
+.header .sub{color:#8899aa;font-size:12px;margin-top:2px}
+.btn{background:#e94560;color:#fff;border:none;padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12px}
+.btn:hover{background:#ff6b6b}
+.tabs{display:flex;background:#16213e;border-bottom:1px solid #333;flex-wrap:wrap}
+.tab{padding:10px 18px;cursor:pointer;color:#8899aa;border-bottom:2px solid transparent;font-size:13px;transition:.2s}
+.tab:hover{color:#fff;background:#1a1a3e}
+.tab.active{color:#e94560;border-bottom-color:#e94560;background:#1a1a3e}
+.tc{display:none;padding:16px}.tc.active{display:block}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.card{background:#16213e;border-radius:6px;padding:14px;border:1px solid #1f2b47}
+.ct{font-size:13px;color:#e94560;margin-bottom:10px;font-weight:600}
+.ch{width:100%;height:320px}.ch-lg{height:420px}
+.mets{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:12px}
+.met{background:#16213e;border-radius:6px;padding:12px;text-align:center;border:1px solid #1f2b47}
+.met .v{font-size:22px;font-weight:700;color:#00b4d8}
+.met .l{font-size:11px;color:#8899aa;margin-top:3px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#0f3460;color:#fff;padding:7px 8px;text-align:left;position:sticky;top:0}
+td{padding:5px 8px;border-bottom:1px solid #1f2b47}
+tr:hover{background:#1a1a3e}
+.tw{max-height:400px;overflow-y:auto}
+.sel{background:#0f3460;color:#fff;border:1px solid #333;padding:4px 8px;border-radius:4px;margin-right:8px}
+.filter-bar{display:flex;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="header">
+<div><h1>🔋 锂矿海外项目 — 时序数据看板</h1>
+<div class="sub">矿山产量 · 盐湖产量 · 美股财报 · 项目进度 · 数据来源</div></div>
+<button class="btn" onclick="refreshAll()">⟳ 刷新</button>
+</div>
+<div class="tabs">
+<div class="tab active" data-i="0">📊 总览</div>
+<div class="tab" data-i="1">⛏️ 硬岩产量时序</div>
+<div class="tab" data-i="2">🧂 盐湖产量时序</div>
+<div class="tab" data-i="3">💰 美股财报时序</div>
+<div class="tab" data-i="4">🗺️ 项目地图</div>
+<div class="tab" data-i="5">📋 数据明细</div>
+</div>
+<div id="metrics" class="mets"></div>
+
+<!-- Tab 0: 总览 -->
+<div class="tc active" id="tab0">
+<div class="g2">
+<div class="card"><div class="ct">🏭 全球硬岩锂矿产量 (年度, kt LCE)</div><div id="c_hr_year" class="ch-lg"></div></div>
+<div class="card"><div class="ct">🧂 全球盐湖锂产量 (季度, kt LCE)</div><div id="c_salt_year" class="ch-lg"></div></div>
+</div>
+<div class="g2">
+<div class="card"><div class="ct">💰 美股锂企营收变化 ($M)</div><div id="c_rev" class="ch"></div></div>
+<div class="card"><div class="ct">📊 项目阶段分布</div><div id="c_stages" class="ch"></div></div>
+</div>
+</div>
+
+<!-- Tab 1: 硬岩产量时序 -->
+<div class="tc" id="tab1">
+<div class="card">
+<div class="filter-bar"><span style="color:#8899aa">公司:</span><select id="sel_hr" class="sel"></select></div>
+<div class="ct">⛏️ 硬岩矿山季度产量/销量 (kt)</div>
+<div id="c_hr_quarter" class="ch-lg"></div>
+</div>
+</div>
+
+<!-- Tab 2: 盐湖产量时序 -->
+<div class="tc" id="tab2">
+<div class="card">
+<div class="filter-bar"><span style="color:#8899aa">项目:</span><select id="sel_salt" class="sel"></select></div>
+<div class="ct">🧂 盐湖季度 LCE 产量 (kt) + 年化产能</div>
+<div id="c_salt_quarter" class="ch-lg"></div>
+</div>
+<div class="g2" style="margin-top:12px">
+<div class="card"><div class="ct">💲 C1 成本时序 ($/t)</div><div id="c_salt_c1" class="ch"></div></div>
+<div class="card"><div class="ct">💲 AISC 时序 ($/t)</div><div id="c_salt_aisc" class="ch"></div></div>
+</div>
+</div>
+
+<!-- Tab 3: 美股财报 -->
+<div class="tc" id="tab3">
+<div class="card">
+<div class="filter-bar"><span style="color:#8899aa">公司:</span><select id="sel_fin" class="sel"></select></div>
+<div class="ct">💰 年度营收 ($M) + 净利润 ($M)</div>
+<div id="c_financial" class="ch-lg"></div>
+</div>
+</div>
+
+<!-- Tab 4: 项目地图 -->
+<div class="tc" id="tab4">
+<div class="g2">
+<div class="card"><div class="ct">🌍 项目国家分布</div><div id="c_countries" class="ch-lg"></div></div>
+<div class="card"><div class="ct">🔄 开发阶段分布</div><div id="c_stage_dist" class="ch-lg"></div></div>
+</div>
+</div>
+
+<!-- Tab 5: 数据明细 -->
+<div class="tc" id="tab5">
+<div class="card">
+<div class="ct">📋 全部数据汇总 (点击切换)</div>
+<div class="filter-bar">
+<button class="btn" onclick="showDataTable('production')">硬岩产量</button>
+<button class="btn" onclick="showDataTable('salt')">盐湖产量</button>
+<button class="btn" onclick="showDataTable('financial')">财报数据</button>
+</div>
+<div class="tw" id="t_data_detail"></div>
+</div>
+</div>
+
+<script src="lithium_time_dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>碳酸锂8-9月产业分析 | 2026.8</title>
+<script src="./echarts.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;color:#e0e0e0;font-family:'Microsoft YaHei','PingFang SC',sans-serif;font-size:14px;line-height:1.8;padding:20px;max-width:1400px;margin:0 auto}
+h1{color:#2ecc71;font-size:28px;text-align:center;margin:20px 0 10px}
+h2{color:#f39c12;font-size:22px;margin:30px 0 15px;padding-bottom:8px;border-bottom:1px solid #333}
+h3{color:#e74c3c;font-size:18px;margin:20px 0 10px}
+.header-info{text-align:center;color:#aaa;font-size:13px;margin-bottom:10px}
+.core-conclusion{background:#16213e;padding:20px;border-radius:8px;border-left:4px solid #2ecc71;margin:15px 0 25px}
+.core-conclusion p{margin:8px 0}
+.section{margin:25px 0}
+.data-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+.data-table th{background:#16213e;color:#f39c12;padding:10px 8px;text-align:center;border:1px solid #333}
+.data-table td{padding:8px;text-align:center;border:1px solid #333}
+.data-table tr:nth-child(even){background:#111128}
+.data-table .red{color:#e74c3c}
+.data-table .green{color:#2ecc71}
+.data-table .yellow{color:#f39c12}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+.chart-card{background:#16213e;border-radius:8px;padding:14px;min-height:380px}
+.chart-card .chart-title{color:#f39c12;font-size:15px;font-weight:bold;margin-bottom:4px}
+.chart-card .chart-annotation{color:#888;font-size:12px;margin-bottom:6px}
+.chart-container{width:100%;height:340px}
+.scenario-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+.scenario-table th{background:#16213e;color:#f39c12;padding:10px;border:1px solid #333}
+.scenario-table td{padding:10px;border:1px solid #333}
+.prob-baseline{background:#1a2a1a}
+.prob-optim{background:#1a1a2a}
+.prob-pessim{background:#2a1a1a}
+.checklist{background:#16213e;padding:16px;border-radius:8px;margin:20px 0}
+.checklist li{margin:6px 0;list-style:none}
+.checklist .pass::before{content:"✔";color:#2ecc71;display:inline-block;width:16px}
+.checklist .warn::before{content:"⚠";color:#f39c12;display:inline-block;width:16px}
+.source-note{color:#666;font-size:11px;font-style:italic;margin-top:4px}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;margin:2px}
+.tag-ann{background:#2ecc71;color:#1a1a2e}
+.tag-smm{background:#3498db;color:#fff}
+.tag-iwencai{background:#9b59b6;color:#fff}
+.tag-market{background:#e67e22;color:#fff}
+.full-width{grid-column:1/-1}
+@media(max-width:900px){.chart-grid{grid-template-columns:1fr}.chart-container{height:280px}}
+</style>
+</head>
+<body oncontextmenu="return false" onselectstart="return false" ondrag="return false" oncopy="return false" oncut="return false" onbeforecopy="return false">
+
+<h1>碳酸锂8-9月产业分析</h1>
+<div class="header-info">数据截至 2026年8月11日 | LC2609 收盘 14.59万 | 问财 iwencai Q11-Q17</div>
+
+<!-- ====== 第一部分：核心结论 ====== -->
+<div class="core-conclusion">
+<h3 style="color:#2ecc71;margin:0 0 10px">📌 核心矛盾与结论</h3>
+<p><strong>检修支撑 vs 复产+仓单回升 的拉锯战。</strong></p>
+<p>8月检修高峰（影响9000-9500吨）叠加储能排产历史高分位（125GWh，同比+158%），支撑现货从14.05万反弹至14.45万。但9月检修回落至2500吨，天华一线~9月初复产，仓单已现重新注册迹象（8/11单日+930手）。</p>
+<p><strong>基准判断（40%概率）：14.0-15.0万区间震荡</strong>，向下有成本线支撑（外购锂辉石现金成本~14.4-14.7万），向上缺催化（9月复产+仓单累积风险）。</p>
+<p><span class="tag tag-ann">确定性高</span> 检修/复产时间表（公告/SMM确认） &nbsp; <span class="tag tag-market">关注</span> 仓单是否突破4万张（最核心单一指标）</p>
+</div>
+
+<!-- ====== 第二部分：供给端 ====== -->
+<h2>二、供给端：检修窗口边际收窄</h2>
+<div class="section">
+<p>8月是年内集中检修窗口，四家主要企业合计影响9000-9500吨碳酸锂等产量。其中天华新能年产5.3万吨产线分两线检修，减产4000-4300吨，是8月供给端最大的单一变量；九岭锂业三厂分阶段检修，合计影响约4000吨，但已于8月中旬基本复产；中矿资源两条高纯锂盐线（3万吨+3.5万吨）已于8月上中旬完成复产，后续不再新增检修；西海锂业A线停机检修于8月31日结束，9月1日复产。进入9月，除天华二线可能延续至9月底外，检修影响预计骤降至2500吨，供给扰动边际大幅收窄。SMM预计8月行业排产10.89万吨环比+7.6%，9月排产有望进一步回升。</p>
+<p>成本端，14.5万元/吨价格水平下，外购锂辉石精矿冶炼现金成本14.41-14.68万元/吨已处于盈亏平衡边缘，完全成本口径明确亏损；外购磷酸铁锂黑粉回收现金成本14.61-15.01万元/吨同样亏损；而自有矿一体化（5.5-7.0万元/吨）和盐湖提锂（3.0-3.8万元/吨）保持高盈利。外购锂辉石冶炼是当前最敏感的边际成本线，若价格回落至14万元下方，外购矿企业将面临实质性减产压力。</p>
+
+<h3>检修企业与复产时间表</h3>
+<table class="data-table">
+<tr><th>企业</th><th>检修内容</th><th>开始</th><th>预计复产</th><th>确定性</th></tr>
+<tr><td>中矿资源</td><td>3万吨线+3.5万吨线</td><td>6/30起</td><td><strong>已复产</strong>（3万线8/10，3.5万线8月中）</td><td><span class="green">公告</span></td></tr>
+<tr><td>九岭锂业</td><td>三厂分阶段，合计~4000吨</td><td>7月中旬</td><td><strong>已复产</strong>（8/15前）</td><td><span class="green">SMM确认</span></td></tr>
+<tr><td>西海锂业</td><td>A线停机，维修回转窑</td><td>7/28</td><td>~9/1</td><td><span class="yellow">SMM跟踪</span></td></tr>
+<tr><td>天华新能 一线</td><td>年产5.3万吨分两线，减产4000-4300吨</td><td>8/13</td><td>~9月上旬</td><td><span class="yellow">市场排程</span></td></tr>
+<tr><td>天华新能 二线</td><td>—</td><td>8/28</td><td>~9月底</td><td><span class="red">不确定</span></td></tr>
+</table>
+<p class="source-note">来源：公司公告、SMM产业跟踪、问财Q11推算</p>
+
+<div class="chart-grid">
+<div class="chart-card">
+<div class="chart-title">📊 8-9月供给扰动变化（检修影响量）</div>
+<div class="chart-annotation">单位：吨，天华二线为最大不确定项</div>
+<div class="chart-container" id="chart-supply"></div>
+</div>
+<div class="chart-card">
+<div class="chart-title">📊 各路线成本线 vs 现价14.5万</div>
+<div class="chart-annotation">红色=亏损，绿色=盈利，单位：万元/吨</div>
+<div class="chart-container" id="chart-cost"></div>
+</div>
+</div>
+
+<h3>成本线分析（14.5万元/吨盈亏）</h3>
+<table class="data-table">
+<tr><th>路线</th><th>现金成本</th><th>完全成本</th><th>14.5万盈亏</th><th>判断</th></tr>
+<tr><td>外购锂辉石</td><td>14.41-14.68</td><td>14.8-16.2</td><td class="red">亏损</td><td>当前最敏感边际线</td></tr>
+<tr><td>外购锂云母</td><td>13.03-13.14</td><td>14.5-16.0</td><td class="yellow">分化</td><td>现金端盈利，完全端分化</td></tr>
+<tr><td>自有矿锂辉石一体化</td><td>5.5-7.0</td><td>6.0-8.0</td><td class="green">明显盈利</td><td>低弹性，长单锁定</td></tr>
+<tr><td>盐湖提锂</td><td>3.0-3.8</td><td>3.0-4.5</td><td class="green">高盈利</td><td>成本最低，极低弹性</td></tr>
+<tr><td>外购黑粉回收</td><td>14.61-15.01</td><td>15.0-16.5</td><td class="red">亏损</td><td>多数亏损</td></tr>
+</table>
+<p class="source-note">来源：问财Q14，外购锂辉石现金端已接近盈亏，完全成本亏损~6006元/吨</p>
+</div>
+
+<!-- ====== 第三部分：需求端 ====== -->
+<h2>三、需求端：储能高分位 vs 现货成交偏弱</h2>
+<div class="section">
+<p>8月储能电芯排产125GWh，处于近4年8月同期约85%-95%分位，同比增速约158%，是需求端最亮眼的数据。核心驱动来自海外大储订单集中交付，314Ah规格为主增量。9月预测130-135GWh，10月135-145GWh，维持高位运行。磷酸铁锂排产55.86万吨环比+5.2%。</p>
+<p>然而，储能排产的高增长并未完全传导至现货成交。8月现货呈"低位反弹+成交偏弱"特征，8/5约14.05万元反弹至8/11约14.45万元，周涨2.85%，但14.5万元上方下游追高意愿不足，正极厂以刚需补库为主。市场出现"长协优先保供、散单供应偏紧"的现象，但散单溢价尚未完全消失。整体定性为"价格有支撑、成交未全面放量"，与储能排产的高增速形成一定背离。</p>
+
+<h3>储能排产趋势</h3>
+<table class="data-table">
+<tr><th>月份</th><th>储能排产</th><th>总锂电排产</th><th>储能占比</th><th>同比增速</th></tr>
+<tr><td>7月</td><td>~115GWh</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>8月 <span class="tag tag-smm">实际</span></td><td><strong>125GWh</strong></td><td>304GWh</td><td>41%</td><td><span class="green">+158%</span></td></tr>
+<tr><td>9月 <span class="tag tag-market">预测</span></td><td>130-135GWh</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>10月 <span class="tag tag-market">预测</span></td><td>135-145GWh</td><td>—</td><td>—</td><td>—</td></tr>
+</table>
+
+<h3>现货价格走势（8月）</h3>
+<table class="data-table">
+<tr><th>日期</th><th>SMM现货</th><th>变化</th><th>LC2609</th><th>基差</th></tr>
+<tr><td>8/5</td><td>14.05万</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>8/7</td><td>14.15万</td><td class="green">+1,000</td><td>—</td><td>—</td></tr>
+<tr><td>8/10</td><td>14.35万</td><td class="green">+2,000</td><td>—</td><td>—</td></tr>
+<tr><td>8/11</td><td>14.45万</td><td class="green">+1,000</td><td>14.59万</td><td class="red">-1,400</td></tr>
+</table>
+<p class="source-note">来源：问财Q12-Q13，周涨2.85%，但成交活跃度下降，"长协优先保供、散单偏紧"</p>
+
+<div class="chart-grid">
+<div class="chart-card">
+<div class="chart-title">📊 储能排产趋势（GWh）</div>
+<div class="chart-annotation">8月实际 vs 9-10月预测，海外大储314Ah为主增量</div>
+<div class="chart-container" id="chart-storage"></div>
+</div>
+<div class="chart-card">
+<div class="chart-title">📊 现货价格走势（8月）</div>
+<div class="chart-annotation">14.5万上方补库克制，14.8-15万为正极厂心理阻力位</div>
+<div class="chart-container" id="chart-spot"></div>
+</div>
+</div>
+</div>
+
+<!-- ====== 第四部分：仓单与基差 ====== -->
+<h2>四、仓单与基差：最核心指标，已现重新注册迹象</h2>
+<div class="section">
+<p>仓单是当前市场多空分歧的集中体现，也是影响9月价格走势的最核心变量。广期所仓单在6月初创56599手历史新高后，经历了约7周的交割注销周期，至7月底降至25042手，降幅约56%。但进入8月，仓单趋势发生逆转——8/5至8/10从28123手升至31621手，8/10至8/11单日激增930手至32551手，重新注册迹象明确。</p>
+<p>仓单快速回升的核心逻辑在于：供给端，中矿、西海、九岭等企业8月中下旬至9月初陆续复产，锂盐供应恢复；需求端，下游补库克制，正极厂14.5万元上方以刚需采购为主，未能形成主动补库行情。供需错配下，多余货源通过仓单注册的方式进入交易所，仓单重新累积。Mysteel预测按当前节奏，8月底仓单有望突破4-4.5万张。若这一预测兑现，将对14.5万元上方价格构成实质性压制。</p>
+<p>仓单与现货价格的基差关系同样值得关注。8/11 LC2609合约收盘14.59万元/吨，SMM现货约14.45万元/吨，期货升水约1400元/吨。东南亚离岸价格1830-1860美元/吨（约13.4-13.6万元/吨）低于国内，国内强现实主要由检修和去库驱动，而非全球性供需改善。若仓单继续累积，基差可能收敛甚至翻转为贴水，进一步强化空头逻辑。</p>
+<table class="data-table">
+<tr><th>时间节点</th><th>仓单手</th><th>变化</th><th>驱动因素</th></tr>
+<tr><td>6/4 历史高点</td><td>56,599</td><td>—</td><td>累库周期顶点</td></tr>
+<tr><td>7/31 低点</td><td>25,042</td><td class="green">-31,557</td><td>LC2607交割强制注销</td></tr>
+<tr><td>8/5</td><td>28,123</td><td class="red">+3,081</td><td>重新注册启动</td></tr>
+<tr><td>8/10</td><td>31,621</td><td class="red">+3,498</td><td>5个交易日+12.4%</td></tr>
+<tr><td>8/11</td><td>32,551</td><td class="red">+930</td><td>单日注册加速</td></tr>
+</table>
+<p class="source-note">来源：问财Q15，Mysteel预测8月底仓单4-4.5万张</p>
+<h3>9月仓单重新累积风险（中性判断：偏高）</h3>
+<p>驱动因素：① 中矿/西海/九岭8月底至9月初陆续复产 ② 8月排产10.89万吨环比+7.6% ③ 下游补库克制 ④ Mysteel预测8月底突破4万张</p>
+<div class="chart-grid">
+<div class="chart-card full-width">
+<div class="chart-title">📊 广期所仓单走势（6月→8月）</div>
+<div class="chart-annotation">7月底为LC2607交割强制注销节点，8月起重新注册迹象明显</div>
+<div class="chart-container" id="chart-wc"></div>
+</div>
+</div>
+</div>
+
+<!-- ====== 第五部分：宏观联动 ====== -->
+<h2>五、宏观联动：短期支撑、上方压制</h2>
+<div class="section">
+<p>8月碳酸锂与沪铜主力日收益相关性为-0.444，与A股锂电池概念指数相关性为+0.394，呈现分化格局。铜代表全球工业需求，8月与碳酸锂的负相关说明锂价的反弹主要由国内产业基本面（检修/去库）驱动，而非宏观需求共振；与锂电板块的正相关则反映权益市场对锂电产业链的联动定价仍在发挥作用。</p>
+<p>海外方面，美元兑人民币每贬值1%，外购锂辉石冶炼成本约抬升2000-3000元/吨，人民币贬值对锂价形成边际支撑。美联储降息预期短期偏支撑，但中美贸易摩擦对远期需求构成压制。国内电池消费税（9月1日起征收2%）带来短期抢装需求支撑，但中期可能压制需求增长。澳洲6%精矿CIF价格2065美元/吨，对应外购冶炼成本约14.47-14.98万元/吨，部分口径已处于亏损边缘，若精矿价格下跌将导致成本线下移。综合来看，宏观环境呈现"短期支撑、上方压制"格局，对产业基本面的边际影响有限。</p>
+<table class="data-table">
+<tr><th>变量</th><th>年日收益相关</th><th>8月以来相关</th><th>传导逻辑</th></tr>
+<tr><td>沪铜主力</td><td>+0.443</td><td class="red">-0.444</td><td>铜代表全球工业需求；8月锂价反弹由检修/去库驱动，与铜背离</td></tr>
+<tr><td>锂电池概念指数</td><td>+0.421</td><td>+0.394</td><td>与权益联动性高于铜</td></tr>
+<tr><td>美元指数</td><td>无连续序列</td><td>方向判断</td><td>短期影响小于产业基本面</td></tr>
+</table>
+<h3>海外锂价 vs 广期所价差</h3>
+<table class="data-table">
+<tr><th>价格锚</th><th>最新水平</th><th>判断</th></tr>
+<tr><td>LC2609</td><td>14.59万（8/11）</td><td>国内定价核心</td></tr>
+<tr><td>SMM现货</td><td>~14.45万</td><td>与2609基本贴近</td></tr>
+<tr><td>东南亚离岸</td><td>1830-1860美元 (~13.4-13.6万)</td><td>低于国内，国内强现实由检修/去库支撑</td></tr>
+<tr><td>澳洲6%精矿CIF</td><td>2065美元/吨</td><td>外购冶炼成本~14.47-14.98万，部分口径亏损</td></tr>
+</table>
+<p class="source-note">来源：问财Q16。人民币贬值对锂价偏边际，美元兑人民币每贬值1%，外购锂辉石成本抬升2000-3000元/吨</p>
+</div>
+
+<!-- ====== 第六部分：情景推演 ====== -->
+<h2>六、三种情景推演与交易策略</h2>
+<div class="section">
+<p><strong>博弈矩阵</strong></p>
+<p>当前碳酸锂市场涉及五个主要参与者，各自的目标函数和行为逻辑不同：</p>
+<p><strong>一体化企业 vs 外购矿企业</strong>：自有矿一体化企业（成本5.5-8.0万元/吨）在14万元价格下仍保持盈利，倾向于维持高产出甚至扩产；外购锂辉石企业（完全成本14.8-16.2万元/吨）在14.5万元以下面临亏损，倾向于减产或挺价惜售。两类企业的成本分化导致供给弹性不同——价格下跌时外购矿企业率先减产，价格回升时一体化企业率先复产，这种"非对称弹性"是锂价波动的内在放大器。</p>
+<p><strong>正极厂</strong>：正极厂的核心诉求是成本控制，14.5万元上方补库意愿明显下降，以刚需采购为主。其策略是"不追高、逢低补"，对现货价格形成天花板效应。但电池消费税9月1日起征收可能带来短期抢装需求，形成阶段性补库窗口。</p>
+<p><strong>贸易商</strong>：贸易商的库存策略取决于基差和现货利润。当前期货升水约1400元/吨，贸易商倾向于"买入现货、卖出期货"进行基差交易。但若仓单快速累积、基差收敛，贸易商可能转为主动抛货去库，加速现货价格回落。</p>
+<p><strong>产业套保空头</strong>：产业套保空头的入场价格决定了上方的压力位。若仓单累积至4万张以上，说明产业套保盘的抛压力度加大，远月合约承压明显。</p>
+<p><strong>投机资金</strong>：投机资金的入场通常放大趋势而非改变趋势。当前市场定性为"区间震荡"，投机资金更可能在14.0-15.0万元区间内进行方向性博弈，而非单边持有。</p>
+<p><strong>博弈均衡分析</strong>：在当前价格水平下，一体化企业的高盈利与外购矿企业的亏损形成供给端的"多空拉锯"；正极厂的补库克制与消费税收前的抢装需求形成需求端的"时间错配"；仓单的快速回升与连续12周的去库形成库存端的"信号矛盾"。这三个拉锯的合力指向基准偏空的结论——9月供给恢复的确定性高于需求放量的确定性，仓单累积的概率偏高，价格区间下沿（14.0万元）的支撑力度可能弱于上沿（15.0万元）的压制力度。</p>
+<p><strong>基准情景（40%概率）：14.0-15.0万元区间震荡</strong></p>
+<p>8月检修尾声叠加储能排产高位运行，现货维持在14.0-14.5万元区间。进入9月，检修企业集中复产，供给恢复但下游补库克制，仓单向3.5-4万张累积。价格在下探14.0万元时获得外购矿成本线支撑，在冲击14.8-15.0万元时遭遇套保盘抛压。整体呈现"下有底、上有顶"的区间格局，交易策略以低吸高抛为主。</p>
+<p><strong>乐观情景（30%概率）：突破上行至15.2-16.0万元</strong></p>
+<p>触发条件：①9月储能排产维持130GWh以上，且实际排产上修；②14.5万元上方正极厂主动补库，现货持续放量，散单溢价消失；③仓单控制在3.5万张以下，未出现重新累积趋势。若上述条件同时满足，说明需求端边际强于供给端，价格突破区间上沿的概率提升。交易策略：回踩14.6-14.8万元轻仓做多，近月合约显著强于远月。</p>
+<p><strong>悲观情景（30%概率）：回落至13.0-13.6万元</strong></p>
+<p>触发条件：①8月底仓单突破4万张，9月向4.5万靠近；②中矿、西海、九岭、天华一线如期或提前复产，供给超预期恢复；③14.5万元上方正极厂仍只按需采购，补库失败；④美元走强、工业金属走弱，宏观拖累。若上述条件兑现，说明供给恢复+补库失败的双重利空共振，价格测试区间下沿甚至跌破。交易策略：反弹至14.8-15.万元配合仓单增加信号试空远月合约，曲线走平。</p>
+<table class="scenario-table">
+<tr><th>情景</th><th>概率</th><th>价格区间</th><th>核心假设</th><th>交易含义</th></tr>
+<tr class="prob-baseline"><td><strong>基准</strong></td><td><strong>40%</strong></td><td>14.0-15.0万</td><td>检修支撑 vs 复产+仓单回升</td><td>区间震荡，低吸高抛</td></tr>
+<tr class="prob-optim"><td>乐观</td><td>30%</td><td>15.2-16.0万</td><td>储能>130GWh+现货放量+仓单<3.5万</td><td>近月强于远月，逢回踩做多</td></tr>
+<tr class="prob-pessim"><td>悲观</td><td>30%</td><td>13.0-13.6万</td><td>仓单>4万+复产+补库失败+美元走强</td><td>反弹做空，远月承压</td></tr>
+</table>
+<h3>交易策略建议</h3>
+<table class="data-table">
+<tr><th>策略</th><th>基准</th><th>乐观</th><th>悲观</th></tr>
+<tr><td>方向</td><td>14.0-15.0万震荡</td><td>突破15万上看15.8-16万</td><td>跌破14万测试13.2-13.6万</td></tr>
+<tr><td>期货操作</td><td>14.0-14.3万低吸，14.8-15万减仓</td><td>回踩14.6-14.8万轻仓多</td><td>14.8-15万+仓单增→试空远月</td></tr>
+<tr><td>期限结构</td><td>近月强于远月</td><td>近月显著强于远月</td><td>远月承压，曲线走平</td></tr>
+<tr><td>权益配置</td><td>资源一体化企业</td><td>锂矿龙头弹性提升</td><td>规避高外购矿企业</td></tr>
+</table>
+<p class="source-note">来源：问财Q17</p>
+</div>
+
+<!-- ====== 第七部分：验证指标 ====== -->
+<h2>七、关键验证指标与阈值</h2>
+<div class="section">
+<p>最核心单一指标：<strong>广期所仓单</strong></p>
+<table class="data-table">
+<tr><th>指标</th><th>当前状态</th><th>偏多触发</th><th>偏空触发</th></tr>
+<tr><td>广期所仓单</td><td>32,551手</td><td class="green">连续2周<3万</td><td class="red">8月底>4万</td></tr>
+<tr><td>SMM社会库存</td><td>连续12周去库</td><td class="green">继续去化</td><td class="red">冶炼厂+贸易商重新累积</td></tr>
+<tr><td>储能排产</td><td>125GWh</td><td class="green">9月>130GWh</td><td class="red">9月<125GWh</td></tr>
+<tr><td>现货成交</td><td>偏弱</td><td class="green">14.5万以上放量</td><td class="red">有价无市</td></tr>
+<tr><td>外购锂辉利润</td><td>~-6,006元/吨</td><td class="green">亏损扩大→减产</td><td class="red">精矿跌→成本线下移</td></tr>
+</table>
+<h3>验证信号</h3>
+<ul class="checklist">
+<li class="pass"><strong>强化反弹信号</strong>：现货站稳14.5万并向14.8-15万推进，正极厂主动补库</li>
+<li class="warn"><strong>削弱反弹信号</strong>：14.5万上方有价无市，仓单突破4万张</li>
+</ul>
+<p class="source-note">来源：问财Q13-Q17综合</p>
+<p><strong>核心指标监控</strong></p>
+<p>9月交易的核心在于跟踪五个关键指标的演化方向，其中广期所仓单是最重要的单一指标：</p>
+<p><strong>广期所仓单</strong>：当前32551手。偏多信号：连续2周低于3万手，说明去库趋势延续；偏空信号：8月底突破4万手，说明重新注册加速。这是判断9月供需平衡方向的核心锚点。</p>
+<p><strong>SMM冶炼厂+贸易商库存</strong>：连续12周去库是支撑当前价格的重要逻辑。若冶炼厂+贸易商库存重新累积，说明"去库故事"结束，现货支撑逻辑瓦解；若继续去化，则价格仍有下行空间受限。</p>
+<p><strong>储能排产</strong>：当前125GWh。9月超过130GWh说明需求端延续强势，支撑乐观情景；低于125GWh则需求端边际走弱，悲观情景概率提升。</p>
+<p><strong>现货成交活跃度</strong>：14.5万元上方放量成交，说明下游认可该价格水平，补库逻辑成立；有价无市则说明上方抛压沉重，多头需警惕。</p>
+<p><strong>外购矿成本线</strong>：当前亏损约6006元/吨。亏损扩大至8000元/吨以上，外购矿企业将实质性减产，为价格提供下支撑；精矿价格下跌导致成本线下移，则外购矿的减产逻辑失效，价格下探空间打开。</p>
+<p><strong>交易策略汇总</strong></p>
+<p>| 情景 | 方向判断 | 期货策略 | 期限结构 | 权益映射 |
+|------|---------|---------|---------|---------|
+| 基准（40%） | 14.0-15.0万震荡 | 14.0-14.3万低吸，14.8-15万减仓 | 近月强于远月 | 资源一体化企业 |
+| 乐观（30%） | 突破看15.2-16万 | 回踩14.6-14.8万轻仓多 | 近月显著强于远月 | 锂矿龙头弹性提升 |
+| 悲观（30%） | 回落看13.0-13.6万 | 14.8-15万+仓单增→试空远月 | 远月承压，曲线走平 | 规避高外购矿企业 |</p>
+</div>
+
+</div>
+
+<h2>八、风险提示与后续跟踪</h2>
+<div class="section">
+<p><strong>上行风险</strong>：①储能排产超预期上修，尤其海外大储订单集中交付节奏加快；②国内政策面出台碳酸锂收储或需求端刺激政策；③海外锂资源项目延期或停产，全球供给收缩。</p>
+<p><strong>下行风险</strong>：①电池消费税9月1日实施后，抢装需求消退，9-10月需求回落；②锂辉石精矿价格下跌，外购矿成本线下移，减产逻辑失效；③宏观环境恶化（美元走强、中美贸易摩擦升级），压制风险偏好。</p>
+<p><strong>后续重点跟踪节奏</strong>：每周跟踪广期所仓单变化（一、四公布）、SMM社会库存（周一公布）、储能排产数据（月初预估、月末实际）。若仓单连续两周突破3.5万手或跌回3万手以下，及时调整情景概率权重。</p></div>
+
+<div style="text-align:center;color:#555;font-size:11px;margin:40px 0 20px;padding-top:20px;border-top:1px solid #333">
+<p>数据截至 2026年8月11日 | 来源：问财 iwencai Q11-Q17、SMM、广期所公告、Mysteel</p>
+<p>本文仅供参考，不构成投资建议</p>
+</div>
+
+<script>
+// Anti-copy protection
+document.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('keydown',function(e){if(e.ctrlKey&&['c','C','s','S','p','P'].includes(e.key))e.preventDefault();if(e.key==='F12')e.preventDefault()});
+document.onselectstart=function(){return false};
+document.ondragstart=function(){return false};
+window.addEventListener('beforeprint',function(){window.print=false});
+document.body.style.userSelect='none';document.body.style.webkitUserSelect='none';
+</script>
+
+<script>
+// === ECharts Dark Theme Configuration ===
+var dkColor = {
+  bg:'#16213e', line:'#333', text:'#e0e0e0', axis:'#555',
+  green:'#2ecc71', red:'#e74c3c', yellow:'#f39c12', blue:'#3498db',
+  purple:'#9b59b6', teal:'#1abc9c'
+};
+var commonAxis = {
+  axisLine:{lineStyle:{color:dkColor.axis}},
+  axisLabel:{color:dkColor.text,fontSize:11},
+  splitLine:{lineStyle:{color:'#1e2a4a'}}
+};
+
+// === Chart 1: Supply - 检修影响量 ===
+(function(){
+  var chart = echarts.init(document.getElementById('chart-supply'), null, {renderer:'canvas'});
+  chart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'#16213e',borderColor:'#333',textStyle:{color:'#e0e0e0'}},
+    legend:{data:['检修影响量'],textStyle:{color:dkColor.text},top:0,right:10},
+    grid:{top:40,bottom:40,left:60,right:20},
+    xAxis:{type:'category',data:['7月','8月','9月','10月'],axisLine:{lineStyle:{color:dkColor.axis}},axisLabel:{color:dkColor.text}},
+    yAxis:{type:'value',name:'吨',nameTextStyle:{color:dkColor.axis},axisLine:{lineStyle:{color:dkColor.axis}},axisLabel:{color:dkColor.text},splitLine:{lineStyle:{color:'#1e2a4a'}}},
+    series:[{
+      name:'检修影响量',type:'bar',data:[12000,9500,2500,1000],
+      barWidth:40,
+      itemStyle:{
+        color:function(p){return p.dataIndex===0?dkColor.teal:p.dataIndex===1?dkColor.yellow:p.dataIndex===2?dkColor.blue:dkColor.purple}
+      },
+      label:{show:true,color:dkColor.text,position:'top',fontSize:12}
+    }]
+  });
+  window.addEventListener('resize', chart.resize);
+})();
+
+// === Chart 2: Cost - 各路线成本线 ===
+(function(){
+  var chart = echarts.init(document.getElementById('chart-cost'), null, {renderer:'canvas'});
+  var routes = ['盐湖\n提锂','自有矿\n辉石','外购\n云母','外购\n辉石','外购黑粉\n回收'];
+  var cashCost = [3.5, 6.5, 13.1, 14.5, 14.8];
+  var fullCost = [4.0, 7.5, 15.2, 15.5, 15.8];
+  chart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'#16213e',borderColor:'#333',textStyle:{color:'#e0e0e0'}},
+    legend:{data:['现金成本','完全成本','现价14.5'],textStyle:{color:dkColor.text},top:0,right:10},
+    grid:{top:50,bottom:40,left:80,right:20},
+    xAxis:{type:'category',data:routes,axisLine:{lineStyle:{color:dkColor.axis}},axisLabel:{color:dkColor.text,fontSize:11}},
+    yAxis:{type:'value',name:'万元/吨',nameTextStyle:{color:dkColor.axis},axisLine:{lineStyle:{color:dkColor.axis}},axisLabel:{color:dkColor.text},splitLine:{lineStyle:{color:'#1e2a4a'}}},
+    series:[
+      {name:'现金成本',type:'bar',data:cashCost,barGap:'10%',itemStyle:{color:dkColor.teal},label:{show:true,position:'top',color:dkColor.text,fontSize:10}},
+      {name:'完全成本',type:'bar',data:fullCost,barGap:'10%',itemStyle:{color:dkColor.blue},label:{show:true,position:'top',color:dkColor.text,fontSize:10}},
+      {name:'现价14.5',type:'line',data:[14.5,14.5,14.5,14.5,14.5],lineStyle:{color:dkColor.red,width:2,type:'dashed'},symbol:'none'}
+    ]
+  });
+  window.addEventListener('resize', chart.resize);
+})();
+
+// === Chart 3: Storage - 储能排产趋势 ===
+(function(){
+  var chart = echarts.init(document.getElementById('chart-storage'), null, {renderer:'canvas'});
+  chart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'#16213e',borderColor:'#333',textStyle:{color:'#e0e0e0'}},
+    legend:{data:['储能排产','同比增速'],textStyle:{color:dkColor.text},top:0,right:10},
+    grid:{top:40,bottom:50,left:60,right:60},
+    xAxis:{type:'category',data:['2025年8月','2026年7月','2026年8月','2026年9月(预)','2026年10月(预)'],axisLine:{lineStyle:{color:dkColor.axis}},axisLabel:{color:dkColor.text,fontSize:10,rotate:20}},
+    yAxis:[
+      {type:'value',name:'GWh',nameTextStyle:{color:dkColor.axis},axisLine:{lineStyle:{color:dkColor.axis}},axisLabel:{color:dkColor.text},splitLine:{lineStyle:{color:'#1e2a4a'}}},
+      {type:'value',name:'同比%',nameTextStyle:{color:dkColor.axis},axisLine:{lineStyle:{color:dkColor.axis}},axisLabel:{color:dkColor.text},splitLine:{show:false}}
+    ],
+    series:[
+      {name:'储能排产',type:'bar',data:[48.5,115,125,'130-135','135-145'],barWidth:36,itemStyle:{
+        color:function(p){return p.dataIndex===2?dkColor.green:p.dataIndex>2?dkColor.yellow:dkColor.teal}
+      },label:{show:true,color:dkColor.text,position:'top',fontSize:11}},
+      {name:'同比增速',type:'line',yAxisIndex:1,data:[null,null,158,null,null],lineStyle:{color:dkColor.red,width:2},itemStyle:{color:dkColor.red},symbol:'circle',symbolSize:8,label:{show:true,color:dkColor.red,position:'top',fontSize:11}}
+    ]
+  });
+  window.addEventListener('resize', chart.resize);
+})();
+
+// === Chart 4: Spot Price - 现货价格走势 ===
+(function(){
+  var chart = echarts.init(document.getElementById('chart-spot'), null, {renderer:'canvas'});
+  chart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'#16213e',borderColor:'#333',textStyle:{color:'#e0e0e0'}},
+    legend:{data:['SMM现货','LC2609','补库阻力位'],textStyle:{color:dkColor.text},top:0,right:10},
+    grid:{top:50,bottom:40,left:60,right:20},
+    xAxis:{type:'category',data:['8/5','8/7','8/10','8/11'],axisLine:{lineStyle:{color:dkColor.axis}},axisLabel:{color:dkColor.text}},
+    yAxis:{type:'value',name:'万元/吨',min:13.5,max:15.5,nameTextStyle:{color:dkColor.axis},axisLine:{lineStyle:{color:dkColor.axis}},axisLabel:{color:dkColor.text},splitLine:{lineStyle:{color:'#1e2a4a'}}},
+    series:[
+      {name:'SMM现货',type:'line',data:[14.05,14.15,14.35,14.45],lineStyle:{color:dkColor.green,width:3},itemStyle:{color:dkColor.green},symbol:'circle',symbolSize:8,label:{show:true,color:dkColor.green,position:'bottom',fontSize:11}},
+      {name:'LC2609',type:'line',data:[null,null,null,14.59],lineStyle:{color:dkColor.blue,width:2},itemStyle:{color:dkColor.blue},symbol:'circle',symbolSize:8},
+      {name:'补库阻力位',type:'line',data:[14.5,14.5,14.5,14.5],lineStyle:{color:dkColor.red,width:2,type:'dashed'},symbol:'none',markText:{style:{color:dkColor.red,fontSize:10}}}
+    ]
+  });
+  window.addEventListener('resize', chart.resize);
+})();
+
+// === Chart 5: Warehouse Receipt - 仓单走势 ===
+(function(){
+  var chart = echarts.init(document.getElementById('chart-wc'), null, {renderer:'canvas'});
+  chart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'#16213e',borderColor:'#333',textStyle:{color:'#e0e0e0'}},
+    legend:{data:['仓单手','Mysteel预测'],textStyle:{color:dkColor.text},top:0,right:10},
+    grid:{top:40,bottom:50,left:70,right:20},
+    xAxis:{type:'category',data:['6/4','6月底','7月底','8/5','8/10','8/11','8月底(预)'],axisLine:{lineStyle:{color:dkColor.axis}},axisLabel:{color:dkColor.text,fontSize:11}},
+    yAxis:{type:'value',name:'手',nameTextStyle:{color:dkColor.axis},axisLine:{lineStyle:{color:dkColor.axis}},axisLabel:{color:dkColor.text},splitLine:{lineStyle:{color:'#1e2a4a'}}},
+    series:[
+      {name:'仓单手',type:'line',data:[56599,null,25042,28123,31621,32551,null],lineStyle:{color:dkColor.yellow,width:3},itemStyle:{color:dkColor.yellow},symbol:'circle',symbolSize:10,areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(243,156,18,0.3)'},{offset:1,color:'rgba(243,156,18,0.02)'}])},label:{show:true,color:dkColor.yellow,position:'top',fontSize:11,formatter:function(p){return p.value?Number(p.value).toLocaleString():''}}},
+      {name:'Mysteel预测',type:'line',data:[null,null,null,null,null,null,'40,000-45,000'],lineStyle:{color:dkColor.red,width:2,type:'dashed'},itemStyle:{color:dkColor.red},symbol:'diamond',symbolSize:10,label:{show:true,color:dkColor.red,position:'top',fontSize:10}}
+    ],
+    visualMap:{show:false,dimensions:0,pieces:[{lte:1,color:dkColor.red},{gt:1,lte:4,color:dkColor.yellow},{gt:4,color:dkColor.teal}]}
+  });
+  window.addEventListener('resize', chart.resize);
+})();
+</script>
+
+</body>
+</html>

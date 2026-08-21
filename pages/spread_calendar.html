@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>碳酸锂月差日历 — K线+双击月差曲线</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#141420;color:#d0d0d8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-user-select:none;user-select:none}
+.header{background:#1a1a2e;border-bottom:1px solid #2a2a4a;padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:16px;color:#e0e0f0;font-weight:600}
+.header .subtitle{font-size:11px;color:#888;margin-left:10px}
+.header a{color:#8888cc;text-decoration:none;font-size:12px;margin-left:15px}
+.header a:hover{color:#aaaadd}
+.container{padding:12px;max-width:1800px;margin:0 auto}
+.card{background:#1a1a2e;border:1px solid #2a2a4a;border-radius:6px;padding:12px;margin-bottom:12px}
+.card h3{font-size:12px;color:#8888cc;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px}
+.chart{width:100%;height:380px}
+.chart-sm{width:100%;height:220px}
+.date-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.date-bar input[type="date"]{background:#12121e;border:1px solid #2a2a4a;color:#e0e0f0;padding:6px 12px;border-radius:4px;font-size:13px}
+.date-bar button{background:#2a2a4a;border:1px solid #444488;color:#ccc;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:12px;transition:all .2s}
+.date-bar button:hover{border-color:#8888cc;color:#e0e0f0}
+.date-bar .info{font-size:11px;color:#888}
+.date-bar .info b{color:#8888cc}
+.quick-dates{display:flex;gap:4px;flex-wrap:wrap}
+.quick-btn{background:#12121e;border:1px solid #2a2a4a;color:#888;padding:4px 10px;border-radius:3px;cursor:pointer;font-size:10px}
+.quick-btn:hover{border-color:#8888cc;color:#ccc}
+.quick-btn.active{background:#2a2a4a;border-color:#8888cc;color:#e0e0f0}
+.table-wrap{overflow-x:auto;max-height:300px;overflow-y:auto}
+.price-table{width:100%;border-collapse:collapse;font-size:11px}
+.price-table th{background:#12121e;color:#8888cc;padding:6px 8px;text-align:left;border-bottom:1px solid #2a2a4a;position:sticky;top:0;white-space:nowrap}
+.price-table td{padding:4px 8px;border-bottom:1px solid #1e1e30;white-space:nowrap}
+.price-table tr:hover td{background:#1e1e35}
+.main-contract{color:#ffaa00;font-weight:700}
+.spread-pos{color:#ff6644}
+.spread-neg{color:#44ff44}
+.hint{font-size:11px;color:#888;padding:8px;background:#12121e;border-radius:4px;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="header">
+  <div style="display:flex;align-items:baseline">
+    <h1>碳酸锂月差日历</h1>
+    <span class="subtitle">K 线 + 双击切换日期 → 12 个月份合约月差曲线</span>
+  </div>
+  <div>
+    <a href="/">← 返回首页</a>
+    <a href="/spread_analysis.html">月差分析 →</a>
+  </div>
+</div>
+<div class="container">
+  <div class="card">
+    <div class="date-bar">
+      <span style="font-size:12px;color:#8888cc">选择日期:</span>
+      <input type="date" id="datePicker" value="2026-04-01">
+      <button onclick="loadDate()">加载</button>
+      <button onclick="loadToday()">今天</button>
+      <button onclick="loadFirstDate()">首日</button>
+      <div class="info" id="dateInfo">选择日期后点击加载</div>
+    </div>
+    <div style="font-size:11px;color:#888;margin-top:6px">快捷日期:</div>
+    <div class="quick-dates" id="quickDates"></div>
+  </div>
+  <div class="card">
+    <h3>主力合约 K 线走势 <span id="klineInfo" style="font-size:11px;color:#888;margin-left:10px"></span></h3>
+    <div class="chart" id="chartKline"></div>
+  </div>
+  <div class="card">
+    <h3>全合约月差曲线 <span id="spreadInfo" style="font-size:11px;color:#888;margin-left:10px"></span></h3>
+    <div class="chart" id="chartSpread"></div>
+  </div>
+  <div class="card">
+    <h3>全合约价格明细 <span id="tableInfo" style="font-size:11px;color:#888;margin-left:10px"></span></h3>
+    <div class="table-wrap" id="priceTableWrap"></div>
+  </div>
+</div>
+
+<script>const API_BASE = 'http://124.221.113.37:8766/lithium-api';
+
+var chartKline = null;
+var chartSpread = null;
+var allDates = [];
+var currentData = null;
+
+window.addEventListener('DOMContentLoaded', function() {
+  var quickDates = [
+    '2026-04-01','2026-04-15','2026-05-06','2026-05-22','2026-06-02','2026-06-16',
+    '2026-06-30','2026-07-15','2026-07-30','2026-08-15','2026-09-01',
+    '2026-03-03','2026-03-18','2026-03-31','2026-02-04','2026-02-18',
+    '2026-01-07','2025-12-16','2025-12-31','2025-11-04','2025-10-10',
+    '2025-09-16','2025-08-18','2025-07-22','2025-06-24','2025-05-20',
+    '2025-04-15','2025-03-14','2025-02-14'
+  ];
+  var bar = document.getElementById('quickDates');
+  var html = '';
+  for (var i = 0; i < quickDates.length; i++) {
+    html += '<button class="quick-btn" onclick="selectDate(\'' + quickDates[i] + '\')">' + quickDates[i] + '</button>';
+  }
+  bar.innerHTML = html;
+  loadDate();
+});
+
+function selectDate(date) {
+  document.getElementById('datePicker').value = date;
+  loadDate();
+  var btns = document.querySelectorAll('.quick-btn');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].className = 'quick-btn' + (btns[i].textContent === date ? ' active' : '');
+  }
+}
+function loadToday() { selectDate(new Date().toISOString().split('T')[0]); }
+function loadFirstDate() { if (allDates.length > 0) selectDate(allDates[0]); }
+
+async function loadDate() {
+  var date = document.getElementById('datePicker').value;
+  if (!date) return;
+  document.getElementById('dateInfo').innerHTML = '加载中...';
+  try {
+    var resp = await fetch(API_BASE + '/contract_prices_by_date?date=' + date);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var data = await resp.json();
+    currentData = data;
+    document.getElementById('dateInfo').innerHTML = '加载成功 · <b>' + (data.actual_date || data.date) + '</b> · ' + data.contract_count + ' 个合约';
+    renderKline(data);
+    renderSpread(data);
+    renderTable(data);
+  } catch(e) {
+    document.getElementById('dateInfo').innerHTML = '加载失败: ' + e.message;
+  }
+}
+
+// ============ K-Line: 主力合约连续 K 线 ============
+function renderKline(data) {
+  var dom = document.getElementById('chartKline');
+  var chartInstance = echarts.getInstanceByDom(dom);
+  if (chartInstance) chartInstance.dispose();
+  dom.innerHTML = '';
+  chartKline = echarts.init(dom);
+
+  var targetDate = data.actual_date || data.date;
+
+  // Fetch a 6-month range centered on the selected date
+  var d = new Date(targetDate);
+  var start = new Date(d.getTime() - 90*86400000).toISOString().split('T')[0];
+  var end = new Date(d.getTime() + 90*86400000).toISOString().split('T')[0];
+
+  fetch(API_BASE + '/kline_daily_range?start=' + start + '&end=' + end)
+    .then(function(r){ return r.json(); })
+    .then(function(kdata) {
+      if (!kdata || !kdata.kline || kdata.kline.length === 0) {
+        renderCandlestickChart(dom, [{date: targetDate, contract: 'N/A', open:0, close:0, low:0, high:0, hold:0, volume:0, settle:0}]);
+        return;
+      }
+      renderCandlestickChart(dom, kdata.kline);
+    })
+    .catch(function(err) {
+      console.error('Kline fetch error:', err);
+      renderCandlestickChart(dom, [{date: targetDate, contract: 'N/A', open:0, close:0, low:0, high:0, hold:0, volume:0, settle:0}]);
+    });
+}
+  // Also load the full date range for the date selector context
+  // Build a map of contract changeover
+}
+
+function renderCandlestickChart(dom, klineData) {
+  var dates = [];
+  var ohlc = [];
+  var volumes = [];
+  var mainContracts = [];
+  
+  // Track which contract is main each day
+  var contractChanges = {};  // date -> main contract symbol
+  var prevContract = null;
+  var contractPeriods = []; // {start, end, contract}
+  
+  for (var i = 0; i < klineData.length; i++) {
+    var k = klineData[i];
+    dates.push(k.date);
+    ohlc.push([k.open, k.close, k.low, k.high]);
+    volumes.push(k.volume || 0);
+    mainContracts.push(k.contract);
+    
+    if (k.contract !== prevContract) {
+      if (prevContract && contractPeriods.length > 0) {
+        contractPeriods[contractPeriods.length - 1].end = k.date;
+      }
+      contractPeriods.push({contract: k.contract, start: k.date});
+      prevContract = k.contract;
+    }
+  }
+  if (contractPeriods.length > 0) {
+    contractPeriods[contractPeriods.length - 1].end = dates[dates.length - 1];
+  }
+
+  // Color code: green if close > open, red if close < open
+  var volColors = ohlc.map(function(o) {
+    return o[1] >= o[0] ? 'rgba(68,255,68,0.5)' : 'rgba(255,68,68,0.5)';
+  });
+
+  // Mark contract changeover points
+  var markPoints = [];
+  for (var j = 1; j < mainContracts.length; j++) {
+    if (mainContracts[j] !== mainContracts[j-1]) {
+      markPoints.push({
+        coord: [j, ohlc[j][3]],
+        value: mainContracts[j],
+        itemStyle: {color: '#ffaa00'}
+      });
+    }
+  }
+
+  var mainContractLabel = contractPeriods.map(function(p) {
+    return p.contract + ' (' + p.start + '→' + p.end + ')';
+  }).join('\n');
+
+  chartKline.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {type: 'cross'},
+      backgroundColor: '#1a1a2e',
+      borderColor: '#2a2a4a',
+      textStyle: {color: '#d0d0d8', fontSize: 11},
+      formatter: function(params) {
+        if (!params || params.length === 0) return '';
+        var idx = params[0].dataIndex;
+        var k = klineData[idx];
+        var chg = k.close - k.open;
+        var chgPct = k.open ? ((chg / k.open) * 100).toFixed(2) : '0.00';
+        return '<b>' + k.date + '</b><br>' +
+          '合约: ' + k.contract + '<br>' +
+          '开: ' + k.open + '<br>' +
+          '高: ' + k.high + '<br>' +
+          '低: ' + k.low + '<br>' +
+          '收: ' + k.close + '<br>' +
+          '涨跌: ' + (chg >= 0 ? '+' : '') + chg + ' (' + (chg >= 0 ? '+' : '') + chgPct + '%)<br>' +
+          '持仓: ' + formatNum(k.hold) + '<br>' +
+          '成交量: ' + formatNum(k.volume);
+      }
+    },
+    legend: {data: ['K线', '成交量'], textStyle: {color: '#888', fontSize: 10}, top: 0},
+    title: {text: '主力合约连续K线 · ' + contractPeriods[0].contract + '→' + contractPeriods[contractPeriods.length-1].contract, left: 'center', top: 25, textStyle: {color: '#8888cc', fontSize: 12}},
+    grid: [
+      {left: 60, right: 15, top: 60, height: '55%'},
+      {left: 60, right: 15, top: '75%', height: '15%'}
+    ],
+    xAxis: [
+      {type: 'category', data: dates, axisLabel: {color: '#666', fontSize: 9, rotate: 30}, axisLine: {lineStyle: {color: '#2a2a4a'}}, gridIndex: 0},
+      {type: 'category', data: dates, axisLabel: {color: '#666', fontSize: 9, rotate: 30}, axisLine: {lineStyle: {color: '#2a2a4a'}}, gridIndex: 1}
+    ],
+    yAxis: [
+      {
+        type: 'value', name: '价格', nameTextStyle: {color: '#666', fontSize: 10},
+        axisLabel: {color: '#666', fontSize: 9}, splitLine: {lineStyle: {color: '#1e1e30'}},
+        gridIndex: 0
+      },
+      {type: 'value', name: '量', nameTextStyle: {color: '#666', fontSize: 10},
+        axisLabel: {color: '#666', fontSize: 9}, splitLine: {show: false}, gridIndex: 1}
+    ],
+    dataZoom: [
+      {type: 'inside', xAxisIndex: [0, 1], start: 50, end: 100},
+      {type: 'slider', xAxisIndex: [0, 1], start: 50, end: 100, bottom: 5}
+    ],
+    series: [
+      {
+        name: 'K线', type: 'candlestick', data: ohlc,
+        itemStyle: {
+          color: '#ff4444', color0: '#44ff44',
+          borderColor: '#ff6644', borderColor0: '#44ff44'
+        },
+        markPoint: {data: markPoints, symbolSize: [60, 18], label: {fontSize: 9, color: '#ffaa00'}},
+        markLine: {
+          symbol: ['none', 'none'],
+          data: contractPeriods.map(function(p) {
+            var idx = dates.indexOf(p.start);
+            return {xAxis: idx, label: {formatter: p.contract, fontSize: 9, color: '#ffaa00'}};
+          })
+        }
+      },
+      {
+        name: '成交量', type: 'bar', yAxisIndex: 1, data: volumes.map(function(v, i) {
+          return {value: v, itemStyle: {color: volColors[i]}};
+        }), barWidth: '40%'
+      }
+    ]
+  });
+
+  // Double-click on K-line to jump to nearby date
+  chartKline.on('dblclick', function(e) {
+    var idx = e.dataIndex;
+    if (idx >= 0 && idx < dates.length) {
+      selectDate(dates[idx]);
+    }
+  });
+
+  document.getElementById('klineInfo').textContent = mainContractLabel;
+}
+
+function renderPlaceholder(dom) {
+  if (echarts.getInstanceByDom(dom)) echarts.getInstanceByDom(dom).dispose();
+  dom.innerHTML = '';
+  chartKline = echarts.init(dom);
+  chartKline.setOption({
+    title: {text: 'K 线数据加载中...', left: 'center', top: 'center', textStyle: {color: '#666', fontSize: 14}},
+    grid: {top: 10, bottom: 10}
+  });
+  document.getElementById('klineInfo').textContent = '';
+}
+
+// ============ Monthly Spread Curve ============
+function renderSpread(data) {
+  var dom = document.getElementById('chartSpread');
+  if (echarts.getInstanceByDom(dom)) echarts.getInstanceByDom(dom).dispose();
+  dom.innerHTML = '';
+  chartSpread = echarts.init(dom);
+
+  var contracts = data.contracts || [];
+  if (contracts.length === 0) {
+    chartSpread.setOption({title: {text: '无合约数据', left: 'center', top: 'center', textStyle: {color: '#666'}}});
+    return;
+  }
+
+  contracts.sort(function(a, b){return a.contract.localeCompare(b.contract);});
+
+  var labels = [];
+  var spreads = [];
+  var prices = [];
+  var colors = [];
+  var mainSettle = data.main_settle || 0;
+
+  for (var i = 0; i < contracts.length; i++) {
+    var c = contracts[i];
+    labels.push(c.contract.slice(2));
+    spreads.push(c.spread_from_main || 0);
+    prices.push(parseFloat(c.settle));
+    if (c.contract === data.main_contract) {
+      colors.push('#ffaa00');
+    } else {
+      colors.push((c.spread_from_main || 0) >= 0 ? '#ff6644' : '#44ff44');
+    }
+  }
+
+  chartSpread.setOption({
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#1a1a2e',
+      borderColor: '#2a2a4a',
+      textStyle: {color: '#d0d0d8', fontSize: 11},
+      formatter: function(params) {
+        if (!params || params.length === 0) return '';
+        var idx = params[0].dataIndex;
+        var c = contracts[idx];
+        var sp = c.spread_from_main;
+        var contangoText = sp > 0 ? '(升水)' : (sp < 0 ? '(贴水)' : '(平水)');
+        return '<b>' + c.contract + '</b><br>' +
+          '结算价: ' + c.settle + '<br>' +
+          '持仓: ' + formatNum(c.hold) + '<br>' +
+          '相对主力: ' + (sp >= 0 ? '+' : '') + sp + ' 点 ' + contangoText + '<br>' +
+          '相对主力: ' + (c.spread_pct || 0) + ' BP';
+      }
+    },
+    legend: {data: ['月差(点)', '结算价(右轴)'], textStyle: {color: '#888', fontSize: 10}, top: 0},
+    grid: {left: 60, right: 60, top: 35, bottom: 50},
+    xAxis: {
+      type: 'category', data: labels,
+      axisLabel: {color: '#aaa', fontSize: 10},
+      axisLine: {lineStyle: {color: '#2a2a4a'}},
+      axisTick: {alignWithLabel: true}
+    },
+    yAxis: [
+      {type: 'value', name: '月差(点)', nameTextStyle: {color: '#888', fontSize: 10},
+       axisLabel: {color: '#888', fontSize: 9}, splitLine: {lineStyle: {color: '#1e1e30'}}},
+      {type: 'value', name: '结算价', nameTextStyle: {color: '#888', fontSize: 10},
+       axisLabel: {color: '#888', fontSize: 9}, splitLine: {show: false}}
+    ],
+    series: [
+      {
+        name: '月差(点)', type: 'line', data: spreads, smooth: true,
+        lineStyle: {width: 3, color: '#8888cc'},
+        itemStyle: {color: function(params) {return colors[params.dataIndex] || '#8888cc';}},
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            {offset: 0, color: 'rgba(136,136,204,0.3)'},
+            {offset: 1, color: 'rgba(136,136,204,0.02)'}
+          ])
+        },
+        markLine: {
+          silent: true,
+          data: [{yAxis: 0, lineStyle: {color: '#555', type: 'dashed', width: 1}}],
+          label: {formatter: '零线', color: '#666', fontSize: 9, position: 'middle'}
+        },
+        markPoint: {
+          data: spreads.map(function(v, i) {
+            return {
+              coord: [i, v],
+              value: v,
+              itemStyle: {color: colors[i] || '#8888cc'},
+              label: {color: '#ccc', fontSize: 9}
+            };
+          }),
+          symbolSize: [50, 20],
+          label: {formatter: function(params) {return params.value >= 0 ? '+' + params.value : params.value;}, fontSize: 9, color: '#ccc'}
+        }
+      },
+      {
+        name: '结算价(右轴)', type: 'line', yAxisIndex: 1, data: prices, smooth: true,
+        lineStyle: {width: 2, color: '#444488', type: 'dashed'},
+        itemStyle: {color: '#444488'}, symbol: 'circle', symbolSize: 6
+      }
+    ],
+    dataZoom: [{type: 'inside'}]
+  });
+
+  document.getElementById('spreadInfo').textContent =
+    '主力: ' + data.main_contract + ' (结算价 ' + mainSettle + ') · ' + contracts.length + ' 合约 · 红=升水 绿=贴水';
+}
+
+// ============ Price Table ============
+function renderTable(data) {
+  var wrap = document.getElementById('priceTableWrap');
+  var contracts = data.contracts || [];
+  contracts.sort(function(a, b){return a.contract.localeCompare(b.contract);});
+
+  var html = '<table class="price-table"><thead><tr>' +
+    '<th>合约</th><th>结算价</th><th>开</th><th>高</th><th>低</th><th>收</th><th>持仓</th><th>相对主力(点)</th><th>相对主力(BP)</th>' +
+    '</tr></thead><tbody>';
+
+  for (var i = 0; i < contracts.length; i++) {
+    var c = contracts[i];
+    var isMain = c.contract === data.main_contract;
+    var sp = c.spread_from_main || 0;
+    var spClass = sp >= 0 ? 'spread-pos' : 'spread-neg';
+    var mainClass = isMain ? 'main-contract' : '';
+    html += '<tr class="' + mainClass + '">' +
+      '<td>' + c.contract + (isMain ? ' ★主力' : '') + '</td>' +
+      '<td>' + c.settle + '</td>' +
+      '<td>' + c.open + '</td>' +
+      '<td>' + c.high + '</td>' +
+      '<td>' + c.low + '</td>' +
+      '<td>' + c.close + '</td>' +
+      '<td>' + formatNum(c.hold) + '</td>' +
+      '<td class="' + spClass + '">' + (sp >= 0 ? '+' : '') + sp + '</td>' +
+      '<td>' + c.spread_pct + '</td>' +
+      '</tr>';
+  }
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  document.getElementById('tableInfo').textContent =
+    data.main_contract + ' (主力) · 结算价 ' + data.main_settle;
+}
+
+function formatNum(n) {
+  if (n === null || n === undefined) return '-';
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// Load trading dates list
+fetch(API_BASE + '/trading_dates')
+  .then(r => r.json())
+  .then(d => {
+    allDates = d.map(function(item){return item.date;});
+  })
+  .catch(function() {});
+</script>
+</body>
+</html>

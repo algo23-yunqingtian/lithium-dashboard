@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>碳酸锂月差分析</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0e17; color: #c8d6e5; font-family: 'Segoe UI', system-ui, sans-serif; }
+.header { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; background: #0d1321; border-bottom: 1px solid #1a2332; }
+.header h1 { font-size: 18px; font-weight: 600; color: #fff; }
+.header h1 small { font-size: 12px; color: #8899aa; font-weight: 400; }
+.header nav { font-size: 13px; }
+.header nav a { margin-left: 16px; color: #8899aa; text-decoration: none; }
+.header nav a:hover, .header nav a.active { color: #00d2ff; text-decoration: none; }
+.controls { padding: 12px 24px; background: #0d1321; border-bottom: 1px solid #1a2332; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.controls label { font-size: 13px; color: #8899aa; }
+.controls select, .controls button { background: #1a2332; color: #c8d6e5; border: 1px solid #2a3a4a; padding: 6px 12px; border-radius: 4px; font-size: 13px; cursor: pointer; }
+.controls select:hover, .controls button:hover { border-color: #00d2ff; }
+.controls button.primary { background: #0066ff; color: #fff; border: none; }
+.controls button.primary:hover { background: #0077ff; }
+.controls .preset-btns { display: flex; gap: 6px; }
+.controls .preset-btns button { font-size: 12px; padding: 4px 10px; }
+.controls .preset-btns button.active { background: #0066ff; color: #fff; border-color: #0066ff; }
+.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+.spread-section { margin-bottom: 28px; }
+.spread-section h3 { font-size: 15px; color: #fff; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.spread-section h3 .badge { font-size: 11px; background: #1a2332; color: #8899aa; padding: 2px 8px; border-radius: 3px; }
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.chart-box { background: #0f1523; border: 1px solid #1a2332; border-radius: 6px; overflow: hidden; }
+.chart-box .chart-title { font-size: 13px; color: #8899aa; padding: 10px 14px 0; }
+.chart-box .chart-container { height: 300px; }
+.table-box { background: #0f1523; border: 1px solid #1a2332; border-radius: 6px; overflow: hidden; margin-bottom: 16px; }
+.table-box .table-title { font-size: 13px; color: #8899aa; padding: 10px 14px; }
+.table-box table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.table-box th { background: #1a2332; color: #8899aa; padding: 8px 10px; text-align: left; position: sticky; top: 0; }
+.table-box td { padding: 6px 10px; border-top: 1px solid #1a2332; }
+.table-box tr:hover td { background: #1a2332; }
+.positive { color: #ff4d4f; }
+.negative { color: #52c41a; }
+.neutral { color: #8899aa; }
+.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.kpi-card { background: #0f1523; border: 1px solid #1a2332; border-radius: 6px; padding: 14px; }
+.kpi-card .kpi-label { font-size: 12px; color: #8899aa; }
+.kpi-card .kpi-value { font-size: 20px; font-weight: 600; color: #fff; margin-top: 4px; }
+.kpi-card .kpi-detail { font-size: 11px; color: #8899aa; margin-top: 2px; }
+.loading { text-align: center; padding: 60px; color: #8899aa; }
+.hidden { display: none; }
+@media (max-width: 900px) { .chart-row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>碳酸锂月差分析 <small>| Spread Analysis</small></h1>
+  <nav>
+    <a href="/lc_position_analysis.html">主分析</a>
+    <a href="/lc_seat_flow.html">席位流向</a>
+    <a href="#" class="active">月差分析</a>
+    <a href="/">主页</a>
+  </nav>
+</div>
+<div class="controls">
+  <label>合约组合:</label>
+  <div class="preset-btns">
+    <button class="preset-btn active" data-contracts="LC2609,LC2611,LC2701">9/11/1月</button>
+    <button class="preset-btn" data-contracts="LC2609,LC2611,LC2612">9/11/12月</button>
+    <button class="preset-btn" data-contracts="LC2609,LC2610,LC2611">9/10/11月</button>
+    <button class="preset-btn" data-contracts="LC2611,LC2701,LC2705">11/1/5月</button>
+    <button class="preset-btn" data-contracts="LC2609,LC2611">9/11月</button>
+  </div>
+  <span style="color:#334">|</span>
+  <label>自选:</label>
+  <select id="customContracts">
+    <option value="">— 选择 —</option>
+  </select>
+  <button onclick="addCustomContract()">+ 添加</button>
+  <button class="primary" onclick="loadSpreadData()">🔄 刷新</button>
+</div>
+<div class="container" id="content">
+  <div class="loading" id="loading">正在加载月差数据...</div>
+  <div id="dashboard" class="hidden"></div>
+</div>
+
+<script>const API_BASE = 'http://124.221.113.37:8766/lithium-api';
+
+let currentContracts = ['LC2609', 'LC2611', 'LC2701'];
+let spreadData = null;
+let charts = {};
+
+function initChart(domId) {
+    const dom = document.getElementById(domId);
+    if (!dom) return null;
+    const existing = echarts.getInstanceByDom(dom);
+    if (existing) existing.dispose();
+    dom.innerHTML = '';
+    const chart = echarts.init(dom);
+    charts[domId] = chart;
+    return chart;
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    populateContractSelect();
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentContracts = btn.dataset.contracts.split(',');
+            loadSpreadData();
+        });
+    });
+});
+
+function populateContractSelect() {
+    const sel = document.getElementById('customContracts');
+    const contracts = ['LC2608','LC2609','LC2610','LC2611','LC2612','LC2701','LC2705'];
+    sel.innerHTML = '<option value="">— 选择 —</option>' + contracts.map(c => '<option value="'+c+'">'+c+'</option>').join('');
+}
+
+function addCustomContract() {
+    const sel = document.getElementById('customContracts');
+    const val = sel.value;
+    if (!val) return;
+    if (!currentContracts.includes(val)) {
+        currentContracts.push(val);
+        currentContracts.sort((a, b) => {
+            const ya=parseInt(a.slice(2,4)),ma=parseInt(a.slice(4,6));
+            const yb=parseInt(b.slice(2,4)),mb=parseInt(b.slice(4,6));
+            return (ya*12+ma)-(yb*12+mb);
+        });
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        loadSpreadData();
+    }
+}
+
+async function loadSpreadData() {
+    const loading = document.getElementById('loading');
+    const dashboard = document.getElementById('dashboard');
+    loading.classList.remove('hidden');
+    dashboard.classList.add('hidden');
+    try {
+        const resp = await fetch(API_BASE + '/lc-spreads?contracts='+currentContracts.join(',')+'&include_position=1');
+        if (!resp.ok) throw new Error('HTTP '+resp.status);
+        spreadData = await resp.json();
+        renderDashboard(spreadData);
+        loading.classList.add('hidden');
+        dashboard.classList.remove('hidden');
+    } catch (e) {
+        loading.innerHTML = '<div style="color:#ff4d4f">加载失败: '+e.message+'</div>';
+    }
+}
+
+function renderDashboard(data) {
+    const dashboard = document.getElementById('dashboard');
+    dashboard.innerHTML = '';
+    renderKPIs(data);
+    renderSpreadCharts(data);
+    renderPositionCharts(data);
+    renderSignalTable(data);
+}
+
+function renderKPIs(data) {
+    const container = document.createElement('div');
+    container.className = 'kpi-row';
+    data.spread_pairs.forEach(function(sp) {
+        if (!sp.data.length) return;
+        const latest = sp.data[sp.data.length - 1];
+        const allSpreads = sp.data.map(function(d){return d.spread;});
+        const maxSpread = Math.max.apply(null, allSpreads);
+        const minSpread = Math.min.apply(null, allSpreads);
+        const avgSpread = allSpreads.reduce(function(a,b){return a+b;}, 0) / allSpreads.length;
+        const card = document.createElement('div');
+        card.className = 'kpi-card';
+        card.innerHTML = '<div class="kpi-label">'+sp.near+' / '+sp.far+' 月差</div><div class="kpi-value '+(latest.spread>0?'positive':'negative')+'">'+(latest.spread>0?'+':'')+latest.spread.toFixed(0)+'</div><div class="kpi-detail">均值: '+avgSpread.toFixed(0)+' | 区间: ['+minSpread.toFixed(0)+', '+maxSpread.toFixed(0)+']</div><div class="kpi-detail">'+sp.data.length+' 个交易日</div>';
+        container.appendChild(card);
+    });
+    document.getElementById('dashboard').appendChild(container);
+}
+
+function renderSpreadCharts(data) {
+    const container = document.createElement('div');
+    container.className = 'container';
+    let chartIdx = 0;
+    data.spread_pairs.forEach(function(sp) {
+        if (!sp.data.length) return;
+        const section = document.createElement('div');
+        section.className = 'spread-section';
+        section.innerHTML = '<h3>'+sp.near+' vs '+sp.far+' 月差走势 <span class="badge">'+sp.data.length+'天</span></h3>';
+        container.appendChild(section);
+        const row = document.createElement('div');
+        row.className = 'chart-row';
+        const box1 = document.createElement('div');
+        box1.className = 'chart-box';
+        box1.innerHTML = '<div class="chart-title">'+sp.near+' &minus; '+sp.far+' (points)</div>';
+        const c1Id = 'spreadChart_'+(chartIdx++);
+        const c1el = document.createElement('div');
+        c1el.id = c1Id;
+        c1el.className = 'chart-container';
+        box1.appendChild(c1el);
+        row.appendChild(box1);
+        const box2 = document.createElement('div');
+        box2.className = 'chart-box';
+        box2.innerHTML = '<div class="chart-title">月差 (%) &times; 10000</div>';
+        const c2Id = 'spreadPctChart_'+(chartIdx++);
+        const c2el = document.createElement('div');
+        c2el.id = c2Id;
+        c2el.className = 'chart-container';
+        box2.appendChild(c2el);
+        row.appendChild(box2);
+        container.appendChild(row);
+        setTimeout(function() {
+            var chart1 = initChart(c1Id);
+            if (!chart1) return;
+            var opt1 = {
+                tooltip: { trigger: 'axis', backgroundColor: '#1a2332', borderColor: '#2a3a4a', textStyle: { color: '#c8d6e5', fontSize: 12 } },
+                grid: { top: 20, bottom: 30, left: 60, right: 20 },
+                xAxis: { type: 'category', data: sp.data.map(function(d){return d.date.slice(4);}), axisLine: { lineStyle: { color: '#2a3a4a' } }, axisLabel: { color: '#8899aa', fontSize: 11 } },
+                yAxis: { type: 'value', name: 'points', splitLine: { lineStyle: { color: '#1a2332' } }, axisLabel: { color: '#8899aa', fontSize: 11 } },
+                series: [{ name: '月差', type: 'line', data: sp.data.map(function(d){return d.spread;}), lineStyle: { color: '#00d2ff', width: 2 }, itemStyle: { color: '#00d2ff' }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(0,210,255,0.3)' }, { offset: 1, color: 'rgba(0,210,255,0)' }] } }, smooth: 0.3 }],
+                dataZoom: [{ type: 'inside', start: 0, end: 100 }]
+            };
+            chart1.setOption(opt1);
+            var chart2 = initChart(c2Id);
+            if (!chart2) return;
+            var barColors = sp.data.map(function(d){return d.spread>=0?'#ff4d4f':'#52c41a';});
+            var opt2 = {
+                tooltip: { trigger: 'axis', backgroundColor: '#1a2332', borderColor: '#2a3a4a', textStyle: { color: '#c8d6e5', fontSize: 12 } },
+                grid: { top: 20, bottom: 30, left: 60, right: 20 },
+                xAxis: { type: 'category', data: sp.data.map(function(d){return d.date.slice(4);}), axisLine: { lineStyle: { color: '#2a3a4a' } }, axisLabel: { color: '#8899aa', fontSize: 11 } },
+                yAxis: { type: 'value', name: '&times;10000bp', splitLine: { lineStyle: { color: '#1a2332' } }, axisLabel: { color: '#8899aa', fontSize: 11 } },
+                series: [{ name: '月差%', type: 'bar', data: sp.data.map(function(d,i){return {value:d.spread_pct, itemStyle:{color:barColors[i]}};}), barWidth: '60%' }],
+                dataZoom: [{ type: 'inside', start: 0, end: 100 }]
+            };
+            chart2.setOption(opt2);
+        }, 150);
+    });
+    document.getElementById('dashboard').appendChild(container);
+}
+
+function renderPositionCharts(data) {
+    const container = document.createElement('div');
+    container.className = 'container';
+    var pairsWithPos = data.spread_pairs.filter(function(sp) {
+        return data.position_data[sp.near] && data.position_data[sp.far];
+    });
+    if (!pairsWithPos.length) {
+        container.innerHTML = '<p style="color:#8899aa;padding:20px">暂无持仓数据</p>';
+        document.getElementById('dashboard').appendChild(container);
+        return;
+    }
+    pairsWithPos.forEach(function(sp) {
+        var pos = data.position_data[sp.near];
+        var posFar = data.position_data[sp.far];
+        var posMap = {};
+        pos.forEach(function(p){posMap[p.date]=p;});
+        var dates = posFar.map(function(p){return p.date;});
+        const section = document.createElement('div');
+        section.className = 'spread-section';
+        section.innerHTML = '<h3>'+sp.near+' & '+sp.far+' 持仓联动 <span class="badge">OI</span></h3>';
+        container.appendChild(section);
+        const row = document.createElement('div');
+        row.className = 'chart-row';
+        const box1 = document.createElement('div');
+        box1.className = 'chart-box';
+        box1.innerHTML = '<div class="chart-title">合约持仓量 (手)</div>';
+        const c3Id = 'posChart_'+sp.near+'_'+sp.far;
+        const c3el = document.createElement('div');
+        c3el.id = c3Id;
+        c3el.className = 'chart-container';
+        box1.appendChild(c3el);
+        row.appendChild(box1);
+        const box2 = document.createElement('div');
+        box2.className = 'chart-box';
+        box2.innerHTML = '<div class="chart-title">净持仓对比 (多-空)</div>';
+        const c4Id = 'netChart_'+sp.near+'_'+sp.far;
+        const c4el = document.createElement('div');
+        c4el.id = c4Id;
+        c4el.className = 'chart-container';
+        box2.appendChild(c4el);
+        row.appendChild(box2);
+        container.appendChild(row);
+        setTimeout(function() {
+            var chart3 = initChart(c3Id);
+            if (!chart3) return;
+            chart3.setOption({
+                tooltip: { trigger: 'axis', backgroundColor: '#1a2332', borderColor: '#2a3a4a', textStyle: { color: '#c8d6e5', fontSize: 12 } },
+                legend: { data: [sp.near+' 多',sp.near+' 空',sp.far+' 多',sp.far+' 空'], textStyle: { color: '#8899aa', fontSize: 11 }, top: 5 },
+                grid: { top: 40, bottom: 30, left: 60, right: 20 },
+                xAxis: { type: 'category', data: dates.map(function(d){return d.slice(4);}), axisLine: { lineStyle: { color: '#2a3a4a' } }, axisLabel: { color: '#8899aa', fontSize: 11 } },
+                yAxis: { type: 'value', splitLine: { lineStyle: { color: '#1a2332' } }, axisLabel: { color: '#8899aa', fontSize: 11 } },
+                series: [
+                    { name: sp.near+' 多', type: 'line', data: dates.map(function(d){return posMap[d]?posMap[d].long_oi:0;}), lineStyle: { color: '#ff4d4f', width: 2 }, itemStyle: { color: '#ff4d4f' } },
+                    { name: sp.near+' 空', type: 'line', data: dates.map(function(d){return posMap[d]?posMap[d].short_oi:0;}), lineStyle: { color: '#52c41a', width: 2 }, itemStyle: { color: '#52c41a' } },
+                    { name: sp.far+' 多', type: 'line', data: posFar.map(function(p){return p.long_oi;}), lineStyle: { color: '#ff8c4f', width: 2 }, itemStyle: { color: '#ff8c4f' } },
+                    { name: sp.far+' 空', type: 'line', data: posFar.map(function(p){return p.short_oi;}), lineStyle: { color: '#75b8e8', width: 2 }, itemStyle: { color: '#75b8e8' } }
+                ],
+                dataZoom: [{ type: 'inside', start: 0, end: 100 }]
+            });
+            var chart4 = initChart(c4Id);
+            if (!chart4) return;
+            var netNear = dates.map(function(d){var p=posMap[d];return p?(p.long_oi-p.short_oi):0;});
+            var netFar = posFar.map(function(p){return p.long_oi-p.short_oi;});
+            chart4.setOption({
+                tooltip: { trigger: 'axis', backgroundColor: '#1a2332', borderColor: '#2a3a4a', textStyle: { color: '#c8d6e5', fontSize: 12 } },
+                legend: { data: [sp.near+' 净',sp.far+' 净'], textStyle: { color: '#8899aa', fontSize: 11 }, top: 5 },
+                grid: { top: 40, bottom: 30, left: 60, right: 20 },
+                xAxis: { type: 'category', data: dates.map(function(d){return d.slice(4);}), axisLine: { lineStyle: { color: '#2a3a4a' } }, axisLabel: { color: '#8899aa', fontSize: 11 } },
+                yAxis: { type: 'value', name: '净OI', splitLine: { lineStyle: { color: '#1a2332' } }, axisLabel: { color: '#8899aa', fontSize: 11 } },
+                series: [
+                    { name: sp.near+' 净', type: 'line', data: netNear, lineStyle: { color: '#ff4d4f', width: 2 }, itemStyle: { color: '#ff4d4f' } },
+                    { name: sp.far+' 净', type: 'line', data: netFar, lineStyle: { color: '#ff8c4f', width: 2 }, itemStyle: { color: '#ff8c4f' } }
+                ],
+                dataZoom: [{ type: 'inside', start: 0, end: 100 }]
+            });
+        }, 150);
+    });
+    document.getElementById('dashboard').appendChild(container);
+}
+
+function renderSignalTable(data) {
+    const container = document.createElement('div');
+    container.className = 'container';
+    Object.keys(data.signals).forEach(function(key) {
+        var signals = data.signals[key];
+        if (!signals.length) return;
+        var recent = signals.slice(-5);
+        var parts = key.split('-');
+        var nearSym = parts[0];
+        var farSym = parts[1];
+        const section = document.createElement('div');
+        section.className = 'spread-section';
+        section.innerHTML = '<h3>'+key+' 正反套方向 <span class="badge">每日信号</span></h3>';
+        container.appendChild(section);
+        const box = document.createElement('div');
+        box.className = 'table-box';
+        box.innerHTML = '<div class="table-title">近5个交易日</div>';
+        var table = document.createElement('table');
+        var rows = '<thead><tr><th>日期</th><th>'+nearSym+' 多</th><th>'+nearSym+' 空</th><th>'+farSym+' 多</th><th>'+farSym+' 空</th><th>方向</th></tr></thead><tbody>';
+        recent.forEach(function(s){
+            var cls = s.direction==='positive'?'positive':s.direction==='negative'?'negative':'neutral';
+            var label = s.direction==='positive'?'正套偏多 &uarr;':s.direction==='negative'?'反套偏多 &darr;':'中性 &rarr;';
+            rows += '<tr><td>'+s.date+'</td><td>'+s.near_oi.toLocaleString()+'</td><td>'+s.near_short.toLocaleString()+'</td><td>'+s.far_oi.toLocaleString()+'</td><td>'+s.far_short.toLocaleString()+'</td><td class="'+cls+'">'+label+'</td></tr>';
+        });
+        rows += '</tbody>';
+        table.innerHTML = rows;
+        box.appendChild(table);
+        container.appendChild(box);
+    });
+    document.getElementById('dashboard').appendChild(container);
+}
+
+window.addEventListener('resize', function() {
+    Object.keys(charts).forEach(function(k) {
+        if (charts[k] && charts[k].resize) charts[k].resize();
+    });
+});
+</script>
+</body>
+</html>

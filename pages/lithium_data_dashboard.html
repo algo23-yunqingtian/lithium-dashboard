@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>锂矿数据资产看板</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#1a1a2e; color:#e0e0e0; font-family:'Microsoft YaHei',sans-serif; min-height:100vh; }
+.header { background:linear-gradient(135deg,#16213e,#0f3460); padding:20px 40px; border-bottom:2px solid #e94560; display:flex; align-items:center; justify-content:space-between; }
+.header h1 { font-size:24px; color:#e94560; }
+.header .subtitle { color:#888; font-size:13px; }
+.stats-bar { display:flex; gap:20px; padding:16px 40px; background:#16213e; flex-wrap:wrap; }
+.stat-card { background:#0f3460; border:1px solid #233554; border-radius:8px; padding:12px 20px; min-width:160px; text-align:center; }
+.stat-card .num { font-size:28px; font-weight:bold; color:#e94560; }
+.stat-card .label { font-size:12px; color:#888; margin-top:4px; }
+.container { padding:20px 40px; max-width:1600px; margin:0 auto; }
+.section { margin-bottom:30px; }
+.section-title { font-size:18px; color:#e94560; border-left:4px solid #e94560; padding-left:12px; margin-bottom:16px; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; }
+.card { background:#16213e; border:1px solid #233554; border-radius:8px; padding:20px; }
+.card h3 { color:#e94560; font-size:14px; margin-bottom:12px; }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th { background:#0f3460; color:#e94560; padding:8px; text-align:left; position:sticky; top:0; }
+td { padding:6px 8px; border-bottom:1px solid #233554; }
+tr:hover { background:#1a1a3e; }
+.tag { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; margin:1px; }
+.tag-rock { background:#b45309; color:#fff; }
+.tag-salt { background:#0891b2; color:#fff; }
+.tag-cn { background:#16a34a; color:#fff; }
+.tag-au { background:#ca8a04; color:#fff; }
+.tag-ar { background:#9333ea; color:#fff; }
+.tag-cl { background:#e11d48; color:#fff; }
+.tag-us { background:#2563eb; color:#fff; }
+.tag-ca { background:#0d9488; color:#fff; }
+.tag-running { background:#16a34a; color:#fff; }
+.tag-stopped { background:#ef4444; color:#fff; }
+.tag-building { background:#f59e0b; color:#fff; }
+.tag-planning { background:#6b7280; color:#fff; }
+.tag-verified { background:#16a34a; color:#fff; }
+.tag-unverified { background:#ef4444; color:#fff; }
+.chart-box { width:100%; height:300px; }
+.data-scroll { max-height:500px; overflow-y:auto; }
+.source-row { display:flex; align-items:flex-start; gap:8px; padding:6px 0; border-bottom:1px solid #233554; font-size:12px; }
+.source-row .company { min-width:100px; color:#e94560; font-weight:bold; }
+.source-row .detail { flex:1; }
+.source-row a { color:#60a5fa; text-decoration:none; }
+.source-row a:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1>⛏ 锂矿数据资产看板</h1>
+    <div class="subtitle">Lithium Data Assets Dashboard — 企业追踪 · 财报数据 · 基本面指标 · 市场信号</div>
+  </div>
+  <div style="text-align:right;">
+    <div style="font-size:13px;color:#888;" id="updateTime"></div>
+  </div>
+</div>
+
+<div class="stats-bar" id="statsBar"></div>
+
+<div class="container">
+
+<!-- SECTION 1: Companies Overview -->
+<div class="section">
+  <div class="section-title">🏢 全球锂企追踪（23家）</div>
+  <div class="grid-2">
+    <div class="card">
+      <h3>企业列表</h3>
+      <div class="data-scroll" id="companyTable"></div>
+    </div>
+    <div class="card">
+      <h3>区域分布</h3>
+      <div id="regionChart" class="chart-box"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 2: Quarterly Data -->
+<div class="section">
+  <div class="section-title">📊 季度财报数据</div>
+  <div class="grid-2">
+    <div class="card">
+      <h3>产量趋势（kt/季度）</h3>
+      <div id="productionChart" class="chart-box" style="height:350px;"></div>
+    </div>
+    <div class="card">
+      <h3>季度数据明细</h3>
+      <div class="data-scroll" id="quarterlyTable"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 3: Data Sources -->
+<div class="section">
+  <div class="section-title">🔗 数据来源与验证</div>
+  <div class="grid-2">
+    <div class="card">
+      <h3>验证状态分布</h3>
+      <div id="sourceChart" class="chart-box"></div>
+    </div>
+    <div class="card">
+      <h3>来源详情</h3>
+      <div class="data-scroll" id="sourceList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 4: Database Stats -->
+<div class="section">
+  <div class="section-title">💾 数据库资产总览</div>
+  <div class="card">
+    <h3>表结构与数据量</h3>
+    <div class="data-scroll" id="dbStatsTable"></div>
+  </div>
+</div>
+
+<!-- SECTION 5: Market Signals & Fundamentals -->
+<div class="section">
+  <div class="section-title">📡 市场信号与基本面</div>
+  <div class="grid-3">
+    <div class="card">
+      <h3>最新市场信号</h3>
+      <div id="signalTable" class="data-scroll"></div>
+    </div>
+    <div class="card">
+      <h3>基本面综合指数</h3>
+      <div id="fundamentalChart" class="chart-box"></div>
+    </div>
+    <div class="card">
+      <h3>LC主力价格</h3>
+      <div id="priceChart" class="chart-box"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 6: Agents -->
+<div class="section">
+  <div class="section-title">🤖 博弈Agent状态</div>
+  <div class="grid-2">
+    <div class="card">
+      <h3>Agent观点与仓位</h3>
+      <div id="agentChart" class="chart-box" style="height:350px;"></div>
+    </div>
+    <div class="card">
+      <h3>市场参与者画像</h3>
+      <div id="participantTable" class="data-scroll"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 7: Indicators -->
+<div class="section">
+  <div class="section-title">📋 追踪指标体系</div>
+  <div class="grid-3" id="indicatorCards"></div>
+</div>
+
+</div>
+
+<script>
+const D = await fetch('/static/lithium_data_dump.json').then(r=>r.json());
+document.getElementById('updateTime').textContent = '数据更新: ' + new Date().toLocaleString('zh-CN');
+
+// === Stats bar ===
+const sBar = document.getElementById('statsBar');
+const sArr = [
+  {n: D.companies.length, l:'追踪企业'},
+  {n: D.quarterly.length, l:'季度财报记录'},
+  {n: D.sources.length, l:'数据来源映射'},
+  {n: Object.keys(D.table_stats).length, l:'数据库表'},
+  {n: Object.values(D.table_stats).reduce((s,t)=>s+t.count,0).toLocaleString(), l:'总数据行数'},
+];
+sBar.innerHTML = sArr.map(s=>`<div class="stat-card"><div class="num">${s.n}</div><div class="label">${s.l}</div></div>`).join('');
+
+// === Helper: region tag ===
+function regionTag(r){
+  const m = {'澳洲':'au','阿根廷':'ar','智利':'cl','美国/智利':'us','加拿大':'ca','中国':'cn','中国/四川':'cn','中国/江西':'cn','中国/广东':'cn','中国/北京':'cn','中国/西藏/阿根廷':'cn','中国/青海':'cn','中国/山东':'cn'};
+  const cls = m[r]||'cn';
+  return `<span class="tag tag-${cls}">${r}</span>`;
+}
+function statusTag(s){
+  const m = {'生产中':'running','停产':'stopped','建设中':'building','规划中':'planning','规划':'planning','待核验':'unverified','非锂主业':'stopped'};
+  const cls = m[s]||'planning';
+  return `<span class="tag tag-${cls}">${s}</span>`;
+}
+
+// === Company table ===
+const ct = document.getElementById('companyTable');
+let cHtml = '<table><tr><th>企业</th><th>代码</th><th>交易所</th><th>类型</th><th>区域</th><th>状态</th><th>备注</th></tr>';
+D.companies.forEach(c => {
+  const rtype = c.resource_type.includes('硬岩')?'<span class="tag tag-rock">硬岩</span>':
+    c.resource_type.includes('盐湖')?'<span class="tag tag-salt">盐湖</span>':
+    `<span class="tag">${c.resource_type}</span>`;
+  cHtml += `<tr><td>${c.company_name}</td><td style="color:#60a5fa">${c.ticker}</td><td>${c.exchange}</td><td>${rtype}</td><td>${regionTag(c.region)}</td><td>${statusTag(c.status)}</td><td style="font-size:11px;color:#888">${c.notes||''}</td></tr>`;
+});
+cHtml += '</table>';
+ct.innerHTML = cHtml;
+
+// === Region chart ===
+const regionCounts = {};
+D.companies.forEach(c => { regionCounts[c.region] = (regionCounts[c.region]||0)+1; });
+const rc = echarts.init(document.getElementById('regionChart'));
+rc.setOption({
+  tooltip:{trigger:'item'},
+  series:[{
+    type:'pie', radius:['40%','70%'],
+    data: Object.entries(regionCounts).map(([k,v])=>({name:k,value:v})),
+    label:{color:'#e0e0e0'},
+    itemStyle:{borderColor:'#1a1a2e',borderWidth:2}
+  }]
+});
+</script>
+
+<script>
+// === Production chart ===
+const byTicker = {};
+D.quarterly.forEach(q => { if(!byTicker[q.ticker]) byTicker[q.ticker]=[]; byTicker[q.ticker].push(q); });
+const prodSeries = Object.entries(byTicker).slice(0,8).map(([tk,qs])=>({
+  name:tk, type:'line',
+  data: qs.sort((a,b)=>b.quarter.localeCompare(a.quarter)).reverse().map(q=>q.production_kt||0),
+  xAxisData: qs.sort((a,b)=>b.quarter.localeCompare(a.quarter)).reverse().map(q=>q.quarter),
+  showSymbol:true, symbolSize:6
+}));
+const pc = echarts.init(document.getElementById('productionChart'));
+pc.setOption({
+  tooltip:{trigger:'axis'}, legend:{data:prodSeries.map(s=>s.name),textStyle:{color:'#888'},bottom:0},
+  grid:{left:60,right:20,top:30,bottom:60},
+  xAxis:{type:'category',axisLabel:{color:'#888',fontSize:10},axisLine:{lineStyle:{color:'#333'}}},
+  yAxis:{type:'value',name:'kt',axisLabel:{color:'#888'},axisLine:{lineStyle:{color:'#333'}},splitLine:{lineStyle:{color:'#233554'}}},
+  series:prodSeries
+});
+
+// === Quarterly table ===
+let qHtml = '<table><tr><th>企业</th><th>季度</th><th>产量(kt)</th><th>销量(kt)</th><th>来源</th><th>质量</th><th>摘要</th></tr>';
+D.quarterly.slice(0,30).forEach(q=>{
+  qHtml+=`<tr><td style="color:#e94560;font-weight:bold">${q.ticker}</td><td>${q.quarter}</td><td>${q.production_kt||'-'}</td><td>${q.sales_kt||'-'}</td><td>${q.source_type||'-'}</td><td><span class="tag ${q.data_quality_flag==='确定'?'tag-verified':'tag-unverified'}">${q.data_quality_flag||'待验证'}</span></td><td style="font-size:11px;color:#888">${q.event_summary||''}</td></tr>`;
+});
+document.getElementById('quarterlyTable').innerHTML = qHtml+'</table>';
+
+// === Source verification chart ===
+const svCounts={}; D.sources.forEach(s=>{svCounts[s.verification_status]=(svCounts[s.verification_status]||0)+1;});
+echarts.init(document.getElementById('sourceChart')).setOption({
+  tooltip:{trigger:'item'},
+  series:[{type:'pie',radius:['40%','70%'],data:Object.entries(svCounts).map(([k,v])=>({name:k,value:v})),label:{color:'#e0e0e0'},itemStyle:{borderColor:'#1a1a2e',borderWidth:2}}]
+});
+
+// === Source list ===
+let srcHtml='';
+D.sources.forEach(s=>{
+  const vtag=s.verification_status==='已验证'?'<span class="tag tag-verified">已验证</span>':'<span class="tag tag-unverified">未通过</span>';
+  srcHtml+=`<div class="source-row"><span class="company">${s.ticker}</span><span class="detail">${s.data_field} | ${s.source_type} ${vtag} ${s.source_url?`<a href="${s.source_url}" target="_blank">链接</a>`:''} ${s.notes?`<br><span style="color:#888;font-size:11px">${s.notes}</span>`:''}</span></div>`;
+});
+document.getElementById('sourceList').innerHTML=srcHtml;
+
+// === DB stats table ===
+let dHtml='<table><tr><th>表名</th><th>说明</th><th>行数</th><th>日期范围</th></tr>';
+Object.entries(D.table_stats).forEach(([tbl,st])=>{
+  dHtml+=`<tr><td style="color:#60a5fa;font-family:monospace">${tbl}</td><td>${st.desc}</td><td>${st.count.toLocaleString()}</td><td style="font-size:11px;color:#888">${st.date_range||'-'}</td></tr>`;
+});
+document.getElementById('dbStatsTable').innerHTML=dHtml+'</table>';
+
+// === Market signals table ===
+let sigHtml='<table><tr><th>日期</th><th>信号</th><th>值</th><th>变化</th><th>方向</th><th>详情</th></tr>';
+D.latest_signals.forEach(s=>{
+  const dir = s.direction===1?'<span style="color:#16a34a">↑ 利多</span>':s.direction===-1?'<span style="color:#ef4444">↓ 利空</span>':'—';
+  sigHtml+=`<tr><td>${s.date}</td><td>${s.signal}</td><td>${s.value}</td><td style="color:${(s.change||0)>=0?'#16a34a':'#ef4444'}">${s.change||'-'}</td><td>${dir}</td><td style="font-size:11px;color:#888">${s.detail||''}</td></tr>`;
+});
+document.getElementById('signalTable').innerHTML=sigHtml+'</table>';
+
+// === Fundamental chart ===
+const fData = D.recent_fundamentals.sort((a,b)=>a.date.localeCompare(b.date));
+echarts.init(document.getElementById('fundamentalChart')).setOption({
+  tooltip:{trigger:'axis'},
+  legend:{data:['供应','需求','库存','利润','情绪','基差','综合'],textStyle:{color:'#888'},bottom:0},
+  grid:{left:50,right:20,top:20,bottom:60},
+  xAxis:{type:'category',data:fData.map(d=>d.date.substring(5)),axisLabel:{color:'#888',fontSize:10,rotate:45},axisLine:{lineStyle:{color:'#333'}}},
+  yAxis:{type:'value',axisLabel:{color:'#888'},axisLine:{lineStyle:{color:'#333'}},splitLine:{lineStyle:{color:'#233554'}}},
+  series:[
+    {name:'供应',type:'line',data:fData.map(d=>d.supply),lineStyle:{width:1}},
+    {name:'需求',type:'line',data:fData.map(d=>d.demand),lineStyle:{width:1}},
+    {name:'库存',type:'line',data:fData.map(d=>d.inventory),lineStyle:{width:1}},
+    {name:'利润',type:'line',data:fData.map(d=>d.profit),lineStyle:{width:1}},
+    {name:'情绪',type:'line',data:fData.map(d=>d.sentiment),lineStyle:{width:1}},
+    {name:'基差',type:'line',data:fData.map(d=>d.basis),lineStyle:{width:1}},
+    {name:'综合',type:'line',data:fData.map(d=>d.composite),lineStyle:{width:2,color:'#e94560'}}
+  ]
+});
+
+// === Price chart ===
+const pData = D.recent_prices.sort((a,b)=>a.date.localeCompare(b.date));
+echarts.init(document.getElementById('priceChart')).setOption({
+  tooltip:{trigger:'axis'},
+  grid:{left:60,right:20,top:20,bottom:20},
+  xAxis:{type:'category',data:pData.map(d=>d.date.substring(5)),axisLabel:{color:'#888',fontSize:10,rotate:45},axisLine:{lineStyle:{color:'#333'}}},
+  yAxis:{type:'value',scale:true,axisLabel:{color:'#888'},axisLine:{lineStyle:{color:'#333'}},splitLine:{lineStyle:{color:'#233554'}}},
+  series:[{type:'line',name:'收盘价',data:pData.map(d=>d.close),lineStyle:{color:'#e94560',width:2},areaStyle:{color:'rgba(233,69,96,0.1)'}}]
+});
+</script>
+
+<script>
+// === Agent chart ===
+const agents = D.agents;
+echarts.init(document.getElementById('agentChart')).setOption({
+  tooltip:{trigger:'axis'},
+  grid:{left:100,right:40,top:10,bottom:10},
+  xAxis:{type:'value',axisLabel:{color:'#888'},axisLine:{lineStyle:{color:'#333'}},splitLine:{lineStyle:{color:'#233554'}}},
+  yAxis:{type:'category',data:agents.map(a=>a.name),axisLabel:{color:'#e0e0e0',fontSize:12},axisLine:{lineStyle:{color:'#333'}}},
+  series:[{
+    type:'bar',
+    data: agents.map(a=>({
+      value: a.view_score,
+      itemStyle: { color: a.view_score>=0?'#16a34a':'#ef4444' }
+    })),
+    label:{show:true,position:'right',color:'#e0e0e0',formatter:p=>`${p.value.toFixed(1)} (仓位:${agents[p.dataIndex].position})`}
+  }]
+});
+
+// === Participants table ===
+let pHtml='<table><tr><th>参与者</th><th>简称</th><th>策略</th></tr>';
+D.participants.forEach(p=>{
+  pHtml+=`<tr><td>${p.name}</td><td style="color:#60a5fa">${p.short_name}</td><td style="font-size:11px;color:#888">${p.strategy||''}</td></tr>`;
+});
+document.getElementById('participantTable').innerHTML=pHtml+'</table>';
+</script>
+
+<script>
+// === Indicators cards ===
+const ic = document.getElementById('indicatorCards');
+let iHtml='';
+Object.entries(D.indicators).forEach(([sheet,metrics])=>{
+  iHtml+=`<div class="card"><h3>${sheet}</h3><div style="font-size:12px;">`;
+  metrics.forEach(m=>{ iHtml+=`<div style="padding:3px 0;border-bottom:1px solid #233554;color:#ccc">${m}</div>`; });
+  iHtml+='</div></div>';
+});
+ic.innerHTML=iHtml;
+
+// Resize charts on window resize
+window.addEventListener('resize',()=>{
+  echarts.getInstanceByDom(document.getElementById('regionChart'))?.resize();
+  echarts.getInstanceByDom(document.getElementById('productionChart'))?.resize();
+  echarts.getInstanceByDom(document.getElementById('sourceChart'))?.resize();
+  echarts.getInstanceByDom(document.getElementById('fundamentalChart'))?.resize();
+  echarts.getInstanceByDom(document.getElementById('priceChart'))?.resize();
+  echarts.getInstanceByDom(document.getElementById('agentChart'))?.resize();
+});
+</script>
+
+</body>
+</html>
+

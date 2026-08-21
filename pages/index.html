@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>碳酸锂日历小作文 📅</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"></script>
+<style>
+:root {
+  --bg: #1a1a2e;
+  --card: #16213e;
+  --card2: #0f3460;
+  --accent: #e94560;
+  --text: #eaeaea;
+  --text2: #a0a0b0;
+  --green: #4ecca3;
+  --red: #e94560;
+  --yellow: #f0c040;
+  --blue: #4fc3f7;
+  --radius: 8px;
+}
+* { margin:0; padding:0; box-sizing:border-box; user-select:none; }
+body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+input, textarea, select, button { user-select: auto; }
+input::selection, textarea::selection { background: var(--accent); color: #fff; }
+
+.header {
+  background: linear-gradient(135deg, var(--card), var(--card2));
+  padding: 20px 16px; text-align: center; border-bottom: 1px solid #ffffff15;
+}
+.header h1 { font-size: 18px; margin-bottom: 4px; }
+.header .sub { font-size: 12px; color: var(--text2); }
+.header .sub span { color: var(--accent); font-weight: bold; }
+
+.nav {
+  background: var(--card2); padding: 8px 12px; display: flex; gap: 8px; flex-wrap: wrap;
+  justify-content: center; border-bottom: 1px solid #ffffff10;
+}
+.nav a {
+  color: var(--text2); text-decoration: none; font-size: 12px; padding: 4px 10px;
+  border-radius: 12px; background: #ffffff08; transition: all .15s;
+}
+.nav a:hover { background: var(--accent); color: #fff; }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 12px; }
+
+.controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.controls button, .controls select {
+  background: var(--card); color: var(--text); border: 1px solid #ffffff20;
+  padding: 6px 14px; border-radius: var(--radius); cursor: pointer; font-size: 13px;
+}
+.controls button:hover { background: var(--accent); border-color: var(--accent); }
+.controls .month-label { font-size: 16px; font-weight: bold; flex: 1; text-align: center; min-width: 140px; }
+.controls .badge { background: var(--card2); padding: 2px 10px; border-radius: 10px; font-size: 11px; }
+
+.calendar { background: var(--card); border-radius: var(--radius); padding: 12px; margin-bottom: 12px; }
+.cal-weekdays { display: grid; grid-template-columns: repeat(7,1fr); text-align: center; font-size: 11px; color: var(--text2); margin-bottom: 6px; }
+.cal-days { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
+.cal-day {
+  background: #ffffff08; border-radius: 4px; padding: 4px 0; text-align: center;
+  cursor: pointer; font-size: 12px; position: relative; transition: all .15s;
+  min-height: 36px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.cal-day:hover { background: var(--card2); }
+.cal-day .day-num { font-weight: 500; }
+.cal-day.today .day-num { background: var(--accent); color: #fff; border-radius: 50%; width: 22px; height: 22px; line-height: 22px; display: inline-block; }
+.cal-day.other-month .day-num { opacity: 0.25; }
+.cal-day .dots { display: flex; gap: 2px; justify-content: center; margin-top: 1px; }
+.cal-day .dot { width: 5px; height: 5px; border-radius: 50%; }
+.cal-day .dot.bullish { background: var(--green); }
+.cal-day .dot.bearish { background: var(--red); }
+.cal-day .dot.neutral { background: var(--yellow); }
+.cal-day .note-count { font-size: 9px; color: var(--text2); line-height: 1; }
+
+.panels { display: flex; flex-direction: column; gap: 12px; }
+@media(min-width:768px){ .panels { flex-direction: row; } .panels > * { flex: 1; } }
+
+.note-form {
+  background: var(--card); border-radius: var(--radius); padding: 14px; margin-bottom: 12px;
+}
+.note-form h3 { font-size: 14px; margin-bottom: 10px; color: var(--accent); }
+.form-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.form-row input, .form-row select {
+  background: #ffffff10; color: var(--text); border: 1px solid #ffffff20;
+  padding: 7px 10px; border-radius: 4px; font-size: 13px; flex: 1; min-width: 80px;
+}
+.form-row input:focus, .form-row select:focus { outline: none; border-color: var(--accent); }
+.form-row textarea {
+  width: 100%; background: #ffffff10; color: var(--text); border: 1px solid #ffffff20;
+  padding: 7px 10px; border-radius: 4px; font-size: 13px; resize: vertical; min-height: 60px;
+  font-family: inherit;
+}
+.form-row textarea:focus { outline: none; border-color: var(--accent); }
+.btn-primary {
+  background: var(--accent); color: #fff; border: none; padding: 8px 20px;
+  border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 600;
+}
+.btn-primary:hover { opacity: .85; }
+.btn-sm {
+  background: transparent; color: var(--text2); border: 1px solid #ffffff20;
+  padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 11px;
+}
+.btn-sm:hover { color: var(--accent); border-color: var(--accent); }
+.btn-danger { color: var(--red); border-color: var(--red); }
+.btn-danger:hover { background: var(--red); color: #fff; }
+
+.notes-list { background: var(--card); border-radius: var(--radius); padding: 14px; }
+.notes-list h3 { font-size: 14px; margin-bottom: 10px; }
+.note-item {
+  padding: 8px 10px; border-left: 3px solid var(--yellow); margin-bottom: 6px;
+  background: #ffffff06; border-radius: 0 4px 4px 0;
+}
+.note-item.sentiment-利多 { border-left-color: var(--green); }
+.note-item.sentiment-利空 { border-left-color: var(--red); }
+.note-item .note-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.note-item .note-title { font-weight: 600; font-size: 13px; }
+.note-item .note-tag { font-size: 11px; padding: 1px 8px; border-radius: 8px; }
+.note-item .tag-利多 { background: #4ecca330; color: var(--green); }
+.note-item .tag-利空 { background: #e9456030; color: var(--red); }
+.note-item .tag-中性 { background: #f0c04030; color: var(--yellow); }
+.note-item .note-content { font-size: 12px; color: var(--text2); line-height: 1.5; white-space: pre-wrap; }
+.note-item .note-actions { margin-top: 4px; display: flex; gap: 4px; }
+
+.empty-state { text-align: center; padding: 30px 20px; color: var(--text2); font-size: 13px; }
+
+.chart-box { background: var(--card); border-radius: var(--radius); padding: 14px; margin-top: 12px; }
+.chart-box h3 { font-size: 14px; margin-bottom: 8px; }
+#klineChart { width:100%; height:540px; }
+
+.stats-bar { display: flex; gap: 12px; justify-content: center; margin-bottom: 8px; flex-wrap: wrap; }
+.stat-item { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+.stat-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6);
+  z-index: 100; align-items: center; justify-content: center;
+}
+.modal-overlay.active { display: flex; }
+.modal-box {
+  background: var(--card); border-radius: var(--radius); padding: 20px;
+  max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;
+}
+.modal-box h3 { margin-bottom: 12px; }
+.modal-close { float: right; cursor: pointer; color: var(--text2); font-size: 20px; }
+.modal-close:hover { color: var(--accent); }
+
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.fade-in { animation: fadeIn .2s ease; }
+
+.period-form { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 8px 0; font-size: 12px; }
+.period-form input { background: #ffffff10; color: var(--text); border: 1px solid #ffffff20; padding: 4px 8px; border-radius: 4px; font-size: 12px; width: 100px; }
+.period-form input[type="color"] { width: 30px; height: 26px; padding: 1px; cursor: pointer; }
+.period-form button { background: var(--card2); color: var(--text); border: 1px solid #ffffff20; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+.period-form button:hover { background: var(--accent); }
+
+.tabs-row { display: flex; gap: 6px; margin-bottom: 10px; border-bottom: 1px solid #ffffff15; }
+.tab-btn { background: transparent; border: none; color: var(--text2); padding: 6px 10px; font-size: 12px; cursor: pointer; border-bottom: 2px solid transparent; }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.bf-card { background: #ffffff08; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; border-left: 3px solid var(--accent); }
+.bf-card .bf-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.bf-card .bf-name { font-weight: 600; font-size: 12px; color: var(--text); }
+.bf-card .bf-sentiment { font-size: 11px; padding: 1px 6px; border-radius: 8px; }
+.bf-card .bf-title { font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+.bf-card .bf-body { font-size: 12px; color: var(--text); line-height: 1.5; }
+.bf-card .bf-reason { font-size: 11px; color: var(--text2); margin-top: 4px; font-style: italic; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📅 碳酸锂日历小作文</h1>
+  <div class="sub">LC 主力合约 · <span id="lastPrice">—</span> · 数据更新：<span id="dataFreshness">—</span></div>
+</div>
+
+<div class="nav">
+  <a href="/">📝 小作文</a>
+  <a href="/battlefield_agents.html">🧠 多主体博弈</a>
+  <a href="/lithium_legacy/sentiment_dashboard.html">📊 情绪仪表盘</a>
+  <a href="/lithium_legacy/logic_scanner.html">🔍 交易逻辑扫描</a>
+  <a href="/spread_analysis.html">📈 月差分析</a>
+  <a href="/lc_spread_review.html">📊 月差复盘</a>
+  <a href="/lc_position_analysis.html">📊 持仓分析</a>
+  <a href="/lc_seat_flow.html">🏛 席位流向</a>
+  <a href="/seat_cross_analysis.html">🔍 席位交叉分析</a>
+  <a href="/lithium_legacy/market_timeline.html">⏰ 市场时间线</a>
+  <a href="/lithium_legacy/lithium_balance_v2.html">⚖️ 供需平衡</a>
+  <a href="/lithium_legacy/index.html">📋 全部页面</a>
+</div>
+
+<div class="container">
+
+  <div class="controls">
+    <button onclick="changeMonth(-1)">◀</button>
+    <div class="month-label" id="monthLabel">2026-06</div>
+    <button onclick="changeMonth(1)">▶</button>
+    <button onclick="goToday()">今天</button>
+    <button onclick="refreshPrices()">🔄 刷新K线</button>
+    <span class="badge" id="noteCount">0条笔记</span>
+  </div>
+
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-item"><span class="stat-dot" style="background:var(--green)"></span> 利多: <b id="statBullish">0</b></div>
+    <div class="stat-item"><span class="stat-dot" style="background:var(--red)"></span> 利空: <b id="statBearish">0</b></div>
+    <div class="stat-item"><span class="stat-dot" style="background:var(--yellow)"></span> 中性: <b id="statNeutral">0</b></div>
+  </div>
+
+  <div class="calendar">
+    <div class="cal-weekdays">
+      <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+    </div>
+    <div class="cal-days" id="calendarGrid"></div>
+  </div>
+
+  <div class="panels">
+    <div>
+      <div class="note-form fade-in">
+        <h3>✏️ 写小作文</h3>
+        <div class="form-row">
+          <input type="date" id="noteDate">
+          <select id="noteSentiment">
+            <option value="利多">利多 📈</option>
+            <option value="利空">利空 📉</option>
+            <option value="中性">中性 ⏸️</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <input type="text" id="noteTitle" placeholder="标题（必填）">
+        </div>
+        <div class="form-row">
+          <textarea id="noteContent" placeholder="内容…"></textarea>
+        </div>
+        <div class="form-row">
+          <input type="text" id="noteTags" placeholder="标签（逗号分隔，如：排产,需求）">
+        </div>
+        <button class="btn-primary" onclick="submitNote()">保存笔记</button>
+      </div>
+
+      <div class="notes-list fade-in">
+        <h3>📋 <span id="selectedDayLabel">选择日期查看笔记</span></h3>
+        <div class="tabs-row">
+          <button class="tab-btn active" data-tab="tabNotes" onclick="switchTab('tabNotes')">小作文</button>
+          <button class="tab-btn" data-tab="tabInterpret" onclick="switchTab('tabInterpret')">博弈解读</button>
+          <button class="tab-btn" data-tab="tabPositions" onclick="switchTab('tabPositions')">持仓地图</button>
+        </div>
+        <div id="tabNotes" class="tab-content active">
+          <div id="notesContainer"><div class="empty-state">点击日历上的日期查看当日笔记</div></div>
+        </div>
+        <div id="tabInterpret" class="tab-content">
+          <div id="interpretContainer"><div class="empty-state">选择日期查看各主体解读</div></div>
+        </div>
+        <div id="tabPositions" class="tab-content">
+          <div id="positionContainer"><div class="empty-state">暂无持仓地图数据</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="chart-box">
+        <h3>📈 LC 日K线</h3>
+        <div id="klineChart"></div>
+        <div class="period-form">
+          <span style="color:var(--text2);">区间标注：</span>
+          <input type="date" id="periodStart" title="开始日期">
+          <input type="date" id="periodEnd" title="结束日期">
+          <input type="text" id="periodTheme" placeholder="主题" style="width:120px">
+          <input type="color" id="periodColor" value="#ff6b6b">
+          <button onclick="addPeriod()">添加标注</button>
+        </div>
+        <div id="periodsList" style="font-size:11px;margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;"></div>
+      </div>
+      <div class="chart-box" style="margin-top:12px;">
+        <h3>📊 期限结构（近 5 个交易日变动）</h3>
+        <div id="termStructureChart" style="width:100%; height:320px;"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <span class="modal-close" onclick="closeEditModal()">✕</span>
+    <h3>编辑笔记</h3>
+    <div class="form-row">
+      <input type="date" id="editDate">
+      <select id="editSentiment">
+        <option value="利多">利多</option><option value="利空">利空</option><option value="中性">中性</option>
+      </select>
+    </div>
+    <div class="form-row"><input type="text" id="editTitle" placeholder="标题"></div>
+    <div class="form-row"><textarea id="editContent" placeholder="内容"></textarea></div>
+    <div class="form-row"><input type="text" id="editTags" placeholder="标签"></div>
+    <button class="btn-primary" onclick="saveEditNote()">保存</button>
+  </div>
+</div>
+
+<script>const API_BASE = 'http://124.221.113.37:8766/lithium-api';
+
+// State
+let currentYear = new Date().getFullYear();
+let currentMonth = new Date().getMonth() + 1;
+let selectedDate = null;
+let editNoteId = null;
+let notesCache = {};
+let pricesData = [];
+let periodsData = [];
+let klineChart = null;
+let termStructureChart = null;
+let battlefieldData = null;
+let participantsMap = {};
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('noteDate').value = today;
+  renderCalendar();
+  loadPrices();
+  loadPeriods();
+  loadStatus();
+  loadTermStructure();
+  // 备份：异步数据加载的连接如在 DOMContentLoaded 时未就绪则 1 秒后重试
+  setTimeout(() => {
+    if (!document.getElementById('termStructureChart').innerHTML.trim()) {
+      loadTermStructure();
+    }
+  }, 1000);
+});
+
+// Calendar
+function renderCalendar() {
+  const grid = document.getElementById('calendarGrid');
+  grid.innerHTML = '';
+  document.getElementById('monthLabel').textContent = `${currentYear}-${String(currentMonth).padStart(2,'0')}`;
+
+  const firstDay = new Date(currentYear, currentMonth - 1, 1);
+  const lastDay = new Date(currentYear, currentMonth, 0);
+  const startPad = firstDay.getDay();
+  const totalDays = lastDay.getDate();
+  const today = new Date().toISOString().slice(0,10);
+
+  const prevLast = new Date(currentYear, currentMonth - 1, 0).getDate();
+  for (let i = startPad - 1; i >= 0; i--) {
+    const d = prevLast - i;
+    grid.appendChild(createDayCell(d, true));
+  }
+
+  for (let d = 1; d <= totalDays; d++) {
+    const ds = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const cell = createDayCell(d, false, ds === today, ds);
+    grid.appendChild(cell);
+  }
+
+  const endPad = (7 - (startPad + totalDays) % 7) % 7;
+  for (let d = 1; d <= endPad; d++) {
+    grid.appendChild(createDayCell(d, true));
+  }
+
+  updateCalendarNotes();
+  loadMonthStats();
+}
+
+function createDayCell(dayNum, otherMonth, isToday, dateStr) {
+  const div = document.createElement('div');
+  div.className = 'cal-day' + (otherMonth ? ' other-month' : '') + (isToday ? ' today' : '');
+  if (dateStr) {
+    div.dataset.date = dateStr;
+    div.onclick = () => selectDate(dateStr);
+  }
+  div.innerHTML = `<span class="day-num">${dayNum}</span><div class="dots"></div>`;
+  return div;
+}
+
+function changeMonth(delta) {
+  currentMonth += delta;
+  if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+  if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+  renderCalendar();
+}
+
+function goToday() {
+  const now = new Date();
+  currentYear = now.getFullYear();
+  currentMonth = now.getMonth() + 1;
+  renderCalendar();
+  const ds = now.toISOString().slice(0,10);
+  selectDate(ds);
+}
+
+function updateCalendarNotes() {
+  fetch(API_BASE + `/stats?year=${currentYear}`)
+    .then(r => r.json())
+    .then(stats => {
+      notesCache = {};
+      stats.forEach(s => {
+        if (!notesCache[s.date]) notesCache[s.date] = { total:0, bullish:0, bearish:0, neutral:0 };
+        notesCache[s.date] = { total:s.total, bullish:s.bullish, bearish:s.bearish, neutral:s.neutral };
+      });
+      document.querySelectorAll('.cal-day[data-date]').forEach(el => {
+        const d = el.dataset.date;
+        const info = notesCache[d];
+        const dots = el.querySelector('.dots');
+        const oldCnt = el.querySelector('.note-count');
+        if (oldCnt) oldCnt.remove();
+        if (info && info.total > 0) {
+          dots.innerHTML = '';
+          if (info.bullish > 0) dots.innerHTML += `<span class="dot bullish"></span>`;
+          if (info.bearish > 0) dots.innerHTML += `<span class="dot bearish"></span>`;
+          if (info.neutral > 0) dots.innerHTML += `<span class="dot neutral"></span>`;
+          const cnt = document.createElement('div');
+          cnt.className = 'note-count';
+          cnt.textContent = `${info.total}条`;
+          el.appendChild(cnt);
+        } else {
+          dots.innerHTML = '';
+        }
+      });
+    });
+}
+
+function loadMonthStats() {
+  const month = `${currentYear}-${String(currentMonth).padStart(2,'0')}`;
+  let bullish = 0, bearish = 0, neutral = 0, total = 0;
+  Object.entries(notesCache).forEach(([date, info]) => {
+    if (date.startsWith(month)) {
+      bullish += info.bullish;
+      bearish += info.bearish;
+      neutral += info.neutral;
+      total += info.total;
+    }
+  });
+  document.getElementById('statBullish').textContent = bullish;
+  document.getElementById('statBearish').textContent = bearish;
+  document.getElementById('statNeutral').textContent = neutral;
+  document.getElementById('noteCount').textContent = `${total}条笔记`;
+}
+
+function selectDate(dateStr) {
+  selectedDate = dateStr;
+  document.getElementById('noteDate').value = dateStr;
+  document.getElementById('selectedDayLabel').textContent = `📋 ${dateStr}`;
+  document.querySelectorAll('.cal-day').forEach(el => el.style.outline = '');
+  const target = document.querySelector(`.cal-day[data-date="${dateStr}"]`);
+  if (target) target.style.outline = '2px solid var(--accent)';
+
+  const notesReq = fetch(`/api/notes?date=${dateStr}`).then(r => r.json());
+  const bfReq = battlefieldData ? Promise.resolve(battlefieldData) : fetch('../api/battlefield.json').then(r => r.json());
+  Promise.all([notesReq, bfReq]).then(([notes, bf]) => {
+    battlefieldData = bf;
+    if (bf.participants) bf.participants.forEach(p => participantsMap[p.id] = p);
+    renderNotes(notes, dateStr);
+    renderBattlefield(dateStr);
+  });
+}
+
+function renderNotes(notes, dateStr) {
+  const container = document.getElementById('notesContainer');
+  if (notes.length === 0) {
+    container.innerHTML = `<div class="empty-state">${dateStr} 暂无笔记，在上面添加一条吧 ✏️</div>`;
+    return;
+  }
+  container.innerHTML = notes.map(n => `
+    <div class="note-item sentiment-${n.sentiment} fade-in">
+      <div class="note-meta">
+        <span class="note-title">${esc(n.title)}</span>
+        <span class="note-tag tag-${n.sentiment}">${n.sentiment}</span>
+      </div>
+      <div class="note-content">${esc(n.content)}</div>
+      ${n.tags ? `<div style="font-size:11px;color:var(--blue);margin-top:2px">🏷 ${esc(n.tags)}</div>` : ''}
+      <div class="note-actions">
+        <button class="btn-sm" onclick="editNote(${n.id})">编辑</button>
+        <button class="btn-sm btn-danger" onclick="deleteNote(${n.id})">删除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === tabId));
+}
+
+function renderBattlefield(dateStr) {
+  if (!battlefieldData) return;
+  const interpret = (battlefieldData.interpretations || []).filter(i => i.note_date && i.note_date.startsWith(dateStr));
+  const positions = (battlefieldData.positions || []).filter(p => p.trigger_date && p.trigger_date.startsWith(dateStr));
+  const ic = document.getElementById('interpretContainer');
+  const pc = document.getElementById('positionContainer');
+  if (interpret.length === 0) {
+    ic.innerHTML = '<div class="empty-state">' + dateStr + ' 暂无主体解读</div>';
+  } else {
+    ic.innerHTML = interpret.map(i => {
+      const p = participantsMap[i.participant_id] || {};
+      const sentColor = i.sentiment === '利多' ? 'var(--green)' : i.sentiment === '利空' ? 'var(--red)' : 'var(--yellow)';
+      return `
+      <div class="bf-card fade-in" style="border-left-color:${sentColor}">
+        <div class="bf-header">
+          <span class="bf-name">${esc(p.name || '主体' + i.participant_id)}</span>
+          <span class="bf-sentiment" style="background:${sentColor}30;color:${sentColor}">${i.sentiment} · ${i.action_bias}</span>
+        </div>
+        <div class="bf-title">关联小作文：${esc(i.note_title || '')}</div>
+        <div class="bf-body">${esc(i.interpretation || '')}</div>
+        <div class="bf-reason">判断依据：${esc(i.reasoning || '')}</div>
+      </div>`;
+    }).join('');
+  }
+  if (positions.length === 0) {
+    pc.innerHTML = '<div class="empty-state">' + dateStr + ' 暂无持仓地图</div>';
+  } else {
+    pc.innerHTML = positions.map(p => {
+      const part = participantsMap[p.participant_id] || {};
+      const dirColor = p.direction === 'long' ? 'var(--green)' : p.direction === 'short' ? 'var(--red)' : 'var(--yellow)';
+      return `
+      <div class="bf-card fade-in" style="border-left-color:${dirColor}">
+        <div class="bf-header">
+          <span class="bf-name">${esc(part.name || '主体' + p.participant_id)}</span>
+          <span class="bf-sentiment" style="background:${dirColor}30;color:${dirColor}">${p.direction}</span>
+        </div>
+        <div class="bf-title">${esc(p.display_label || p.position_type || '')}</div>
+        <div class="bf-body">${esc(p.description || '')}</div>
+        <div class="bf-reason">价位区间：¥${Number(p.price_low||0).toLocaleString()} ~ ¥${Number(p.price_high||0).toLocaleString()} · 强度 ${p.strength||0}</div>
+      </div>`;
+    }).join('');
+  }
+}
+
+// CRUD
+function submitNote() {
+  const date = document.getElementById('noteDate').value;
+  const title = document.getElementById('noteTitle').value.trim();
+  const content = document.getElementById('noteContent').value.trim();
+  const sentiment = document.getElementById('noteSentiment').value;
+  const tags = document.getElementById('noteTags').value.trim();
+  if (!title) { alert('请输入标题'); return; }
+
+  fetch(API_BASE + '/notes', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({date, title, content, sentiment, tags})
+  })
+  .then(r => r.json())
+  .then(() => {
+    document.getElementById('noteTitle').value = '';
+    document.getElementById('noteContent').value = '';
+    document.getElementById('noteTags').value = '';
+    if (selectedDate) selectDate(selectedDate);
+    updateCalendarNotes();
+  });
+}
+
+function deleteNote(id) {
+  if (!confirm('确定删除这条笔记？')) return;
+  fetch(API_BASE + `/notes/${id}`, { method: 'DELETE' })
+    .then(() => {
+      if (selectedDate) selectDate(selectedDate);
+      updateCalendarNotes();
+    });
+}
+
+let editingNoteId = null;
+function editNote(id) {
+  editingNoteId = id;
+  fetch(API_BASE + `/notes?date=${selectedDate}`)
+    .then(r => r.json())
+    .then(notes => {
+      const n = notes.find(x => x.id === id);
+      if (!n) return;
+      document.getElementById('editDate').value = n.date;
+      document.getElementById('editTitle').value = n.title;
+      document.getElementById('editContent').value = n.content;
+      document.getElementById('editSentiment').value = n.sentiment;
+      document.getElementById('editTags').value = n.tags;
+      document.getElementById('editModal').classList.add('active');
+    });
+}
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('active');
+  editingNoteId = null;
+}
+function saveEditNote() {
+  if (!editingNoteId) return;
+  const data = {
+    date: document.getElementById('editDate').value,
+    title: document.getElementById('editTitle').value.trim(),
+    content: document.getElementById('editContent').value.trim(),
+    sentiment: document.getElementById('editSentiment').value,
+    tags: document.getElementById('editTags').value.trim(),
+  };
+  if (!data.title) { alert('请输入标题'); return; }
+  fetch(API_BASE + `/notes/${editingNoteId}`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(data)
+  })
+  .then(r => r.json())
+  .then(() => {
+    closeEditModal();
+    if (selectedDate) selectDate(selectedDate);
+    updateCalendarNotes();
+  });
+}
+
+// Prices / K-line
+function loadPrices() {
+  fetch('../api/prices.json')
+    .then(r => r.json())
+    .then(data => {
+      pricesData = data;
+      renderKline();
+      updateLastPrice();
+    });
+}
+
+function refreshPrices() {
+  fetch(API_BASE + '/prices/refresh', { method: 'POST' })
+    .then(r => r.json())
+    .then(res => {
+      if (res.ok) loadPrices();
+      alert(res.message);
+    });
+}
+
+function updateLastPrice() {
+  if (pricesData.length === 0) return;
+  const last = pricesData[pricesData.length - 1];
+  document.getElementById('lastPrice').textContent = `¥${Number(last.close).toLocaleString()} (${last.date})`;
+}
+
+function renderKline() {
+  if (pricesData.length === 0) return;
+  const dom = document.getElementById('klineChart');
+  if (!klineChart) klineChart = echarts.init(dom);
+
+  const dates = pricesData.map(p => p.date);
+  const kData = pricesData.map(p => [p.open, p.close, p.low, p.high]);
+  const volumes = pricesData.map(p => p.volume);
+  const positions = pricesData.map(p => p.position);
+
+  const markAreas = periodsData.map(p => ({
+    name: p.theme,
+    itemStyle: { color: p.color || '#ff6b6b', opacity: 0.15 },
+    label: { show: true, position: 'insideTop', formatter: p.theme, fontSize: 10, color: '#fff' },
+    yAxis: '85%',
+    startValue: p.start_date,
+    endValue: p.end_date,
+  }));
+
+  const option = {
+    backgroundColor: 'transparent',
+    legend: { data: ['成交量', '持仓量'], textStyle: { color: '#a0a0b0' }, top: 5, right: 10 },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'cross' },
+      formatter: function(params) {
+        let d = {};
+        for (const p of params) {
+          if (p.seriesType === 'candlestick' && p.dataIndex !== undefined) {
+            d = pricesData[p.dataIndex] || {};
+            break;
+          }
+          if (!d.date && p.dataIndex !== undefined) d = pricesData[p.dataIndex] || {};
+        }
+        return `<b>${d.date}</b><br/>
+          开: ¥${Number(d.open).toLocaleString()}<br/>
+          收: ¥${Number(d.close).toLocaleString()}<br/>
+          高: ¥${Number(d.high).toLocaleString()}<br/>
+          低: ¥${Number(d.low).toLocaleString()}<br/>
+          量: ${(d.volume/10000).toFixed(1)}万手<br/>
+          仓: ${(d.position/10000).toFixed(1)}万手`;
+      }
+    },
+    grid: [
+      { left: 60, right: 60, top: 30, height: '55%' },
+      { left: 60, right: 60, top: '72%', height: '18%' }
+    ],
+    xAxis: [
+      {
+        type: 'category',
+        data: dates,
+        axisLabel: { color: '#a0a0b0', fontSize: 10, rotate: 45 },
+        axisLine: { lineStyle: { color: '#ffffff20' } },
+        splitLine: { show: false },
+        gridIndex: 0,
+        min: 'dataMin',
+        max: 'dataMax'
+      },
+      {
+        type: 'category',
+        data: dates,
+        axisLabel: { show: false },
+        gridIndex: 1
+      }
+    ],
+    yAxis: [
+      {
+        type: 'value',
+        scale: true,
+        axisLabel: { color: '#a0a0b0', fontSize: 10, formatter: v => (v/1000).toFixed(0) + 'k' },
+        splitLine: { lineStyle: { color: '#ffffff10' } },
+        gridIndex: 0
+      },
+      {
+        type: 'value',
+        scale: true,
+        name: '成交量',
+        nameTextStyle: { color: '#a0a0b0', fontSize: 10 },
+        position: 'left',
+        axisLabel: { color: '#a0a0b0', fontSize: 9, formatter: v => (v/10000).toFixed(1) + '万' },
+        splitLine: { show: false },
+        gridIndex: 1
+      },
+      {
+        type: 'value',
+        scale: true,
+        name: '持仓量',
+        nameTextStyle: { color: '#a0a0b0', fontSize: 10 },
+        position: 'right',
+        axisLabel: { color: '#a0a0b0', fontSize: 9, formatter: v => (v/10000).toFixed(1) + '万' },
+        splitLine: { show: false },
+        gridIndex: 1
+      }
+    ],
+    dataZoom: [
+      { type: 'inside', xAxisIndex: [0,1], start: 80, end: 100 },
+      { type: 'slider', xAxisIndex: [0,1], start: 80, end: 100,
+        bottom: 2, height: 12,
+        borderColor: '#ffffff20', backgroundColor: '#16213e',
+        fillerColor: '#0f346080'
+      }
+    ],
+    series: [
+      {
+        type: 'candlestick',
+        data: kData,
+        xAxisIndex: 0, yAxisIndex: 0,
+        itemStyle: { color: '#4ecca3', color0: '#e94560', borderColor: '#4ecca3', borderColor0: '#e94560' },
+        markArea: { data: markAreas },
+        markPoint: {
+          data: [{ type: 'max', name: '最高', symbolSize: 40 }, { type: 'min', name: '最低', symbolSize: 40 }],
+          label: { formatter: p => '¥' + Number(p.value).toLocaleString(), fontSize: 10 }
+        }
+      },
+      {
+        type: 'bar',
+        name: '成交量',
+        data: volumes,
+        xAxisIndex: 1, yAxisIndex: 1,
+        itemStyle: {
+          color: function(param) {
+            const idx = param.dataIndex;
+            return pricesData[idx] && pricesData[idx].close >= pricesData[idx].open ? '#4ecca360' : '#e9456060';
+          }
+        }
+      },
+      {
+        type: 'line',
+        name: '持仓量',
+        data: positions,
+        xAxisIndex: 1, yAxisIndex: 2,
+        smooth: true,
+        showSymbol: false,
+        lineStyle: { color: '#4fc3f7', width: 2 },
+        areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(79,195,247,.2)' }, { offset: 1, color: 'rgba(79,195,247,0)' }] } }
+      }
+    ]
+  };
+
+  klineChart.setOption(option, true);
+  klineChart.on('click', function(params) {
+    if (params.dataIndex !== undefined && pricesData[params.dataIndex]) {
+      selectDate(pricesData[params.dataIndex].date);
+    }
+  });
+}
+
+// Periods
+function loadPeriods() {
+  fetch('../api/periods.json')
+    .then(r => r.json())
+    .then(data => {
+      periodsData = data;
+      renderPeriodsList();
+      if (pricesData.length > 0) renderKline();
+    });
+}
+
+function addPeriod() {
+  const start = document.getElementById('periodStart').value;
+  const end = document.getElementById('periodEnd').value;
+  const theme = document.getElementById('periodTheme').value.trim();
+  const color = document.getElementById('periodColor').value;
+  if (!start || !end || !theme) { alert('请填写完整'); return; }
+  fetch('../api/periods.json', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({start_date: start, end_date: end, theme, color})
+  })
+  .then(r => r.json())
+  .then(() => {
+    document.getElementById('periodStart').value = '';
+    document.getElementById('periodEnd').value = '';
+    document.getElementById('periodTheme').value = '';
+    loadPeriods();
+  });
+}
+
+function deletePeriod(id) {
+  fetch(API_BASE + `/periods/${id}`, { method: 'DELETE' })
+    .then(() => loadPeriods());
+}
+
+function renderPeriodsList() {
+  const el = document.getElementById('periodsList');
+  if (periodsData.length === 0) {
+    el.innerHTML = '<span style="color:var(--text2)">暂无区间标注</span>';
+    return;
+  }
+  el.innerHTML = periodsData.map(p => `
+    <span style="background:${p.color}30;border:1px solid ${p.color};border-radius:4px;padding:2px 8px;display:inline-flex;align-items:center;gap:4px;">
+      ${p.theme}
+      <span style="font-size:10px;color:var(--text2)">${p.start_date}~${p.end_date}</span>
+      <span style="cursor:pointer;color:var(--red)" onclick="deletePeriod(${p.id})">✕</span>
+    </span>
+  `).join('');
+}
+
+// Utils
+function esc(s) {
+  if (!s) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// Status & Term Structure
+function loadStatus() {
+  fetch('../api/status.json')
+    .then(r => r.json())
+    .then(data => {
+      const el = document.getElementById('dataFreshness');
+      el.textContent = data.last_price_date ? `${data.last_price_date} (笔记 ${data.note_count} 条)` : '暂无数据';
+      el.title = `合约数据: ${data.last_contract_date}\n月差数据: ${data.last_spread_date}\nDB 修改: ${data.db_mtime}\n服务器: ${data.server_time}`;
+    })
+    .catch(() => {
+      document.getElementById('dataFreshness').textContent = '状态获取失败';
+    });
+}
+
+function loadTermStructure() {
+  fetch(API_BASE + '/term-structure?days=5')
+    .then(r => r.json())
+    .then(data => {
+      renderTermStructure(data);
+    })
+    .catch(e => {
+      console.error('期限结构加载失败', e);
+      document.getElementById('termStructureChart').innerHTML = '<div class="empty-state">期限结构加载失败</div>';
+    });
+}
+
+function renderTermStructure(data) {
+  const dom = document.getElementById('termStructureChart');
+  if (!termStructureChart) termStructureChart = echarts.init(dom);
+  if (!data.history || data.history.length === 0) {
+    dom.innerHTML = '<div class="empty-state">暂无合约数据</div>';
+    return;
+  }
+
+  // 合约轴取最新一天
+  const latest = data.history[data.history.length - 1];
+  const contracts = latest.contracts.map(c => c.contract);
+  const palette = ['#e94560', '#f0c040', '#4ecca3', '#4fc3f7', '#a855f7'];
+
+  // 期限结构曲线：最近 N 天
+  const series = data.history.map((h, idx) => ({
+    type: 'line',
+    name: h.date,
+    data: contracts.map(sym => {
+      const c = h.contracts.find(x => x.contract === sym);
+      return c ? c.close : null;
+    }),
+    smooth: true,
+    symbol: idx === data.history.length - 1 ? 'circle' : 'none',
+    symbolSize: 6,
+    lineStyle: { color: palette[idx % palette.length], width: idx === data.history.length - 1 ? 3 : 1.5, type: idx === data.history.length - 1 ? 'solid' : 'dashed' },
+    itemStyle: { color: palette[idx % palette.length] }
+  }));
+
+  // 最新一天的成交量/持仓量（只显示最新一天避免太乱）
+  const volumes = latest.contracts.map(c => c.volume);
+  const positions = latest.contracts.map(c => c.position);
+  series.push(
+    { type: 'bar', name: '成交量', data: volumes, yAxisIndex: 1, itemStyle: { color: '#4ecca3aa' }, barMaxWidth: 20 },
+    { type: 'line', name: '持仓量', data: positions, yAxisIndex: 1, smooth: true, showSymbol: false, lineStyle: { color: '#4fc3f7', width: 2 } }
+  );
+
+  // 月差变化小表格 HTML
+  let spreadHtml = '';
+  const spreadKeys = Object.keys(data.spreads || {});
+  if (spreadKeys.length > 0) {
+    const dates = data.history.map(h => h.date);
+    spreadHtml = `<div style="margin-top:8px;font-size:11px;overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;color:var(--text2);">
+        <tr><th style="text-align:left;padding:3px 6px;border-bottom:1px solid #ffffff20;">月差</th>${dates.map(d => `<th style="text-align:right;padding:3px 6px;border-bottom:1px solid #ffffff20;">${d.slice(5)}</th>`).join('')}</tr>
+        ${spreadKeys.map(k => {
+          const vals = dates.map(d => data.spreads[k][d]);
+          const latestVal = vals[vals.length - 1];
+          const prevVal = vals[vals.length - 2];
+          const change = (latestVal !== undefined && prevVal !== undefined) ? latestVal - prevVal : 0;
+          const changeColor = change > 0 ? 'var(--green)' : change < 0 ? 'var(--red)' : 'var(--text2)';
+          return `<tr>
+            <td style="padding:3px 6px;border-bottom:1px solid #ffffff10;">${k}</td>
+            ${vals.map(v => `<td style="text-align:right;padding:3px 6px;border-bottom:1px solid #ffffff10;">${v !== undefined ? v.toLocaleString() : '-'}</td>`).join('')}
+            <td style="text-align:right;padding:3px 6px;border-bottom:1px solid #ffffff10;color:${changeColor};">${change > 0 ? '+' : ''}${change}</td>
+          </tr>`;
+        }).join('')}
+      </table>
+    </div>`;
+  }
+
+  // 量仓变化 HTML
+  let changeHtml = '';
+  const changeKeys = Object.keys(data.changes || {});
+  if (changeKeys.length > 0) {
+    changeHtml = `<div style="margin-top:10px;font-size:11px;">
+      <div style="color:var(--text2);margin-bottom:4px;">最新日量仓变动（相对前交易日）</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${changeKeys.map(k => {
+          const c = data.changes[k];
+          const vColor = c.volume_change > 0 ? 'var(--green)' : c.volume_change < 0 ? 'var(--red)' : 'var(--text2)';
+          const pColor = c.position_change > 0 ? 'var(--green)' : c.position_change < 0 ? 'var(--red)' : 'var(--text2)';
+          return `<div style="background:#ffffff08;border-radius:4px;padding:4px 8px;min-width:90px;">
+            <div style="font-weight:600;color:var(--text);">${k}</div>
+            <div style="color:${vColor};">量 ${c.volume_change > 0 ? '+' : ''}${c.volume_change}</div>
+            <div style="color:${pColor};">仓 ${c.position_change > 0 ? '+' : ''}${c.position_change}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  // ECharts 容器 + 下方表格
+  dom.innerHTML = `<div id="termStructureLine" style="width:100%;height:260px;"></div><div id="termStructureExtra"></div>`;
+  document.getElementById('termStructureExtra').innerHTML = spreadHtml + changeHtml;
+  const lineChart = echarts.init(document.getElementById('termStructureLine'));
+  if (termStructureChart !== lineChart) {
+    termStructureChart.dispose();
+    termStructureChart = lineChart;
+  }
+
+  const option = {
+    backgroundColor: 'transparent',
+    title: { text: `期限结构变动（近 ${data.history.length} 个交易日）`, left: 'center', textStyle: { color: '#a0a0b0', fontSize: 11 } },
+    tooltip: {
+      trigger: 'axis',
+      formatter: params => {
+        const idx = params[0].dataIndex;
+        const sym = contracts[idx];
+        let html = `<b>${sym}</b><br/>`;
+        params.forEach(p => {
+          if (p.seriesType === 'line' && p.value !== undefined && p.value !== null) {
+            html += `${p.marker} ${p.seriesName}: ¥${Number(p.value).toLocaleString()}<br/>`;
+          }
+        });
+        const lc = latest.contracts[idx];
+        if (lc) html += `量: ${lc.volume.toLocaleString()} 仓: ${lc.position.toLocaleString()}`;
+        return html;
+      }
+    },
+    legend: { data: data.history.map(h => h.date).concat(['成交量', '持仓量']), textStyle: { color: '#a0a0b0', fontSize: 9 }, top: 22, type: 'scroll' },
+    grid: { left: 50, right: 50, top: 50, bottom: 20 },
+    xAxis: {
+      type: 'category',
+      data: contracts,
+      axisLabel: { color: '#a0a0b0', fontSize: 10 },
+      axisLine: { lineStyle: { color: '#ffffff20' } }
+    },
+    yAxis: [
+      {
+        type: 'value', scale: true, name: '收盘价',
+        nameTextStyle: { color: '#a0a0b0', fontSize: 10 },
+        axisLabel: { color: '#a0a0b0', fontSize: 10, formatter: v => (v/1000).toFixed(0) + 'k' },
+        splitLine: { lineStyle: { color: '#ffffff10' } }
+      },
+      {
+        type: 'value', scale: true, name: '量/仓', position: 'right',
+        nameTextStyle: { color: '#a0a0b0', fontSize: 10 },
+        axisLabel: { color: '#a0a0b0', fontSize: 9 },
+        splitLine: { show: false }
+      }
+    ],
+    series
+  };
+  lineChart.setOption(option, true);
+}
+
+window.addEventListener('resize', () => {
+  if (klineChart) klineChart.resize();
+  if (termStructureChart) termStructureChart.resize();
+});
+
+// Anti-copy (允许输入框内正常选择和编辑)
+document.addEventListener('contextmenu', e => {
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (['input','textarea','select'].includes(tag)) return;
+  e.preventDefault();
+});
+document.addEventListener('selectstart', e => {
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (['input','textarea'].includes(tag)) return;
+  e.preventDefault();
+});
+document.addEventListener('dragstart', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (['input','textarea'].includes(tag)) return;
+  if (e.ctrlKey && (e.key === 'c' || e.key === 's' || e.key === 'p')) e.preventDefault();
+  if (e.key === 'F12') e.preventDefault();
+});
+</script>
+</body>
+</html>

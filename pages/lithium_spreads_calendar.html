@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>碳酸锂基差月差全景</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#141420;color:#d0d0d8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-user-select:none;user-select:none}
+.header{background:#1a1a2e;border-bottom:1px solid #2a2a4a;padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:16px;color:#e0e0f0;font-weight:600}
+.header .subtitle{font-size:11px;color:#888;margin-left:10px}
+.header a{color:#8888cc;text-decoration:none;font-size:12px;margin-left:15px}
+.header a:hover{color:#aaaadd}
+.container{padding:12px;max-width:1800px;margin:0 auto}
+.card{background:#1a1a2e;border:1px solid #2a2a4a;border-radius:6px;padding:12px;margin-bottom:12px}
+.card h3{font-size:12px;color:#8888cc;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px}
+.chart{width:100%;height:340px}
+.chart-sm{width:100%;height:260px}
+.chart-tall{width:100%;height:420px}
+.date-bar{background:#12121e;border:1px solid #2a2a4a;border-radius:4px;padding:8px 12px;display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+.date-bar .date-label{font-size:11px;color:#888}
+.date-bar .date-value{font-size:14px;color:#e0e0f0;font-weight:700}
+.date-bar .click-hint{font-size:10px;color:#666;margin-left:auto}
+.date-bar .refresh-btn,.date-bar .date-btn{background:#2a2a4a;border:1px solid #8888cc;color:#8888cc;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px}
+.date-bar .date-btn:hover,.date-bar .refresh-btn:hover{background:#8888cc;color:#1a1a2e}
+.date-bar .date-btn.active{background:#8888cc;color:#1a1a2e}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:8px}
+.stat-box{background:#12121e;border:1px solid #2a2a4a;border-radius:4px;padding:8px 10px}
+.stat-box .label{font-size:10px;color:#666;text-transform:uppercase}
+.stat-box .value{font-size:14px;color:#e0e0f0;font-weight:700;margin-top:2px}
+.pos-color{color:#ff4444}
+.neg-color{color:#44ff44}
+.contango{color:#ffaa00}
+.backwardation{color:#44aaff}
+.spread-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
+.spread-table th{background:#12121e;color:#8888cc;padding:5px 8px;text-align:left;border-bottom:1px solid #2a2a4a}
+.spread-table td{padding:4px 8px;border-bottom:1px solid #1e1e30}
+.spread-table tr:hover td{background:#1e1e35}
+.spread-badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:600}
+.badge-contango{background:rgba(255,170,0,0.2);color:#ffaa00}
+.badge-backwardation{background:rgba(68,170,255,0.2);color:#44aaff}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.price-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}
+.price-item{background:#12121e;border:1px solid #2a2a4a;border-radius:4px;padding:6px 8px;font-size:11px}
+.price-item .sym{color:#8888cc;font-weight:600}
+.price-item .price{color:#e0e0f0;font-weight:700;font-size:13px;margin-top:2px}
+.price-item .change{font-size:10px}
+@media(max-width:1200px){.two-col{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:baseline">
+    <h1>碳酸锂基差月差全景</h1>
+    <span class="subtitle">双击K线查看当日各合约结算价与升贴水</span>
+  </div>
+  <div>
+    <a href="/">← 首页</a>
+    <a href="/spread_analysis.html">月差分析 →</a>
+  </div>
+</div>
+
+<div class="container">
+  <!-- K线图 -->
+  <div class="card">
+    <h3>📈 碳酸锂主力日K线 <span style="font-size:10px;color:#666">(双击/滚轮缩放) <span id="zoomRange" style="color:#888"></span></span></h3>
+    <div class="chart chart-tall" id="klineChart" style="height:460px"></div>
+  </div>
+
+  <!-- 点击日期 + 月差 -->
+  <div class="card" id="dateDetailCard" style="display:none">
+    <h3>📊 月差结构 — <span id="selectedDate"></span></h3>
+    <div class="date-bar">
+      <span class="date-label">选中日期：</span>
+      <span class="date-value" id="displayDate"></span>
+      <button class="date-btn" onclick="goPrevDate()" title="前一天">◀ 前一天</button>
+      <button class="date-btn" onclick="goNextDate()" title="后一天">后一天 ▶</button>
+      <button class="date-btn" onclick="goLatestDate()" title="最新">最新</button>
+      <button class="date-btn" onclick="goFirstDate()" title="最早">最早</button>
+      <span id="dateStats" style="margin-left:auto;display:flex;gap:12px;font-size:11px"></span>
+      <button class="refresh-btn" onclick="loadDateDetail()">🔄 刷新</button>
+    </div>
+    <div class="stats-grid" id="monthStats"></div>
+    <div class="two-col">
+      <div>
+        <h3 style="font-size:11px;color:#8888cc;margin-bottom:6px">各合约结算价</h3>
+        <div class="chart-sm" id="spreadCurve"></div>
+      </div>
+      <div>
+        <h3 style="font-size:11px;color:#8888cc;margin-bottom:6px">各合约结算价</h3>
+        <div class="chart-sm" id="priceCurve"></div>
+      </div>
+    </div>
+    <h3 style="font-size:11px;color:#8888cc;margin-top:10px;margin-bottom:6px">合约对月差明细</h3>
+    <div style="overflow-x:auto;max-height:280px;overflow-y:auto">
+      <table class="spread-table" id="spreadTable">
+        <thead><tr>
+          <th>合约对</th><th>近月结算</th><th>远月结算</th><th>价差(点)</th>
+          <th>价差(元/吨)</th><th>结构</th>
+        </tr></thead>
+        <tbody id="spreadTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>const API_BASE = 'http://124.221.113.37:8766/lithium-api';
+
+var klineChart = null;
+var spreadCurveChart = null;
+var priceCurveChart = null;
+var allDates = [];
+var klineData = [];
+var latestSpreadData = null;
+var KLINE_API = '../api/prices.json';
+var ALL_DATES_API = API_BASE + '/all_dates';
+var currentIdx = -1; // 当前选中日期在allDates中的索引
+var historicalSpreads = []; // 存储最近5个交易日的月差数据
+
+// ============ 初始化 ============
+async function init() {
+  await Promise.all([loadKlineData(), loadAllDates()]);
+  renderKlineChart();
+  // 自动加载最新交易日月差
+  var lastDate = klineData.length > 0 ? klineData[klineData.length - 1].date : null;
+  if (lastDate) {
+    selectDate(lastDate);
+  }
+}
+
+// ============ 加载所有交易日 ============
+async function loadAllDates() {
+  try {
+    var resp = await fetch(ALL_DATES_API);
+    if (resp.ok) {
+      allDates = await resp.json();
+    }
+  } catch(e) {
+    console.error('加载日期列表失败:', e);
+    // 从klineData中提取
+    for (var i = 0; i < klineData.length; i++) {
+      allDates.push(klineData[i].date);
+    }
+  }
+}
+
+// ============ 日期导航（基于allDates搜索前后相邻交易日） ============
+function findPrevDate(dateStr) {
+  var idx = allDates.indexOf(dateStr);
+  if (idx > 0) return allDates[idx - 1];
+  return null;
+}
+function findNextDate(dateStr) {
+  var idx = allDates.indexOf(dateStr);
+  if (idx >= 0 && idx < allDates.length - 1) return allDates[idx + 1];
+  return null;
+}
+function goPrevDate() {
+  var d = document.getElementById('displayDate').textContent;
+  if (d) { var prev = findPrevDate(d); if (prev) selectDate(prev); }
+}
+function goNextDate() {
+  var d = document.getElementById('displayDate').textContent;
+  if (d) { var next = findNextDate(d); if (next) selectDate(next); }
+}
+function goLatestDate() {
+  if (allDates.length > 0) selectDate(allDates[allDates.length - 1]);
+}
+function goFirstDate() {
+  if (allDates.length > 0) selectDate(allDates[0]);
+}
+
+// ============ K线数据 ============
+async function loadKlineData() {
+  try {
+    // 从 contract_prices 汇总主力合约价格
+    // 使用 prices 表 (已有733条主力数据)
+    var resp = await fetch(KLINE_API);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var data = await resp.json();
+    // 从 prices 表: date, open, high, low, close, volume, position, settle
+    for (var i = 0; i < data.length; i++) {
+      klineData.push({
+        date: data[i].date,
+        open: data[i].open,
+        high: data[i].high,
+        low: data[i].low,
+        close: data[i].close,
+        volume: data[i].volume || 0,
+        position: data[i].position || 0
+      });
+    }
+  } catch(e) {
+    console.error('K线加载失败:', e);
+  }
+}
+
+// ============ 渲染K线图 ============
+function renderKlineChart() {
+  var dom = document.getElementById('klineChart');
+  if (!dom) return;
+  if (klineChart) { klineChart.dispose(); klineChart = null; }
+  echarts.dispose(dom);
+  dom.innerHTML = '';
+  klineChart = echarts.init(dom, null, {renderer: 'canvas'});
+
+  var dates = [];
+  var ohlc = [];
+  var volumes = [];
+  var colors = [];
+  for (var i = 0; i < klineData.length; i++) {
+    var d = klineData[i];
+    dates.push(d.date);
+    ohlc.push([d.open, d.close, d.low, d.high]);
+    volumes.push(d.volume || 0);
+    colors.push(d.close >= d.open ? 1 : -1); // 1=涨(红), -1=跌(绿)
+  }
+
+  var option = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'cross' },
+      backgroundColor: '#1a1a2e',
+      borderColor: '#2a2a4a',
+      textStyle: { color: '#d0d0d8', fontSize: 11 },
+      formatter: function(params) {
+        if (!params || params.length === 0) return '';
+        var p = params[0];
+        var idx = p.dataIndex;
+        var d = klineData[idx];
+        if (!d) return p.name;
+        var chg = d.close - d.open;
+        var chgPct = d.open ? ((chg / d.open) * 100).toFixed(2) : '0';
+        var chgColor = chg >= 0 ? '#ff4444' : '#44ff44';
+        return '<b>' + p.name + '</b><br/>' +
+          '开: ' + d.open + '<br/>' +
+          '收: ' + d.close + '<br/>' +
+          '高: ' + d.high + '<br/>' +
+          '低: ' + d.low + '<br/>' +
+          '<span style="color:' + chgColor + '">涨跌: ' + (chg >= 0 ? '+' : '') + chg + ' (' + (chg >= 0 ? '+' : '') + chgPct + '%)</span><br/>' +
+          '成交量: ' + (d.volume || 0).toLocaleString() + '<br/>' +
+          '<span style="color:#666;font-size:10px">双击查看月差结构</span>';
+      }
+    },
+    legend: {
+      data: ['K线', '成交量'],
+      textStyle: { color: '#888', fontSize: 10 },
+      top: 0
+    },
+    grid: [
+      { left: 60, right: 15, top: 35, bottom: 60 },
+      { left: 60, right: 15, top: '80%', bottom: 20, height: 80 }
+    ],
+    xAxis: [
+      { type: 'category', data: dates, axisLabel: { color: '#666', fontSize: 9, rotate: 30 }, axisLine: { lineStyle: { color: '#2a2a4a' } }, splitLine: { show: false } },
+      { type: 'category', data: dates, gridIndex: 1, axisLabel: { show: false }, axisLine: { lineStyle: { color: '#2a2a4a' } } }
+    ],
+    yAxis: [
+      { type: 'value', name: '价格', nameTextStyle: { color: '#666', fontSize: 10 }, axisLabel: { color: '#666', fontSize: 9 }, splitLine: { lineStyle: { color: '#1e1e30' } } },
+      { type: 'value', gridIndex: 1, axisLabel: { show: false }, splitLine: { show: false } }
+    ],
+    series: [
+      {
+        name: 'K线', type: 'candlestick',
+        data: ohlc,
+        itemStyle: {
+          color: '#ff4444',      // 阳线填充
+          color0: '#44ff44',     // 阴线填充
+          borderColor: '#ff4444',
+          borderColor0: '#44ff44'
+        },
+        emphasis: { itemStyle: { borderWidth: 2 } }
+      },
+      {
+        name: '成交量', type: 'bar',
+        xAxisIndex: 1, yAxisIndex: 1,
+        data: volumes.map(function(v, i) {
+          return {
+            value: v,
+            itemStyle: { color: colors[i] > 0 ? 'rgba(255,68,68,0.5)' : 'rgba(68,255,68,0.5)' }
+          };
+        }),
+        barWidth: '50%'
+      }
+    ],
+    brush: { },
+    // 底部dataZoom — 日期拖动缩放
+    dataZoom: [
+      {
+        type: 'inside',
+        xAxisIndex: [0, 1],
+        start: 0, end: 100,
+        minValueSpan: 1,
+        zoomOnMouseWheel: true,
+        moveOnMouseMove: true,
+        moveOnMouseWheel: false
+      },
+      {
+        type: 'slider',
+        xAxisIndex: [0, 1],
+        bottom: 5,
+        height: 24,
+        start: 0, end: 100,
+        borderColor: '#2a2a4a',
+        backgroundColor: '#12121e',
+        fillerColor: 'rgba(136,136,204,0.15)',
+        handleStyle: { color: '#8888cc', borderColor: '#8888cc' },
+        textStyle: { color: '#888', fontSize: 9 },
+        dataBackground: {
+          lineStyle: { color: '#3a3a5a', width: 1 },
+          areaStyle: { color: '#2a2a4a' }
+        },
+        selectedDataBackground: {
+          lineStyle: { color: '#8888cc' },
+          areaStyle: { color: 'rgba(136,136,204,0.2)' }
+        }
+      }
+    ],
+    toolbox: {
+      feature: {
+        dataZoom: { show: true },
+        restore: { show: true },
+        saveAsImage: { show: false }
+      },
+      iconStyle: { borderColor: '#666' }
+    }
+  };
+
+  klineChart.setOption(option, true);
+
+  // dataZoom 变化时更新范围显示
+  klineChart.on('dataZoom', function(params) {
+    var opt = klineChart.getOption();
+    var dz = opt.dataZoom;
+    if (dz && dz.length > 0) {
+      var range = dz[0];
+      var start = range.start || 0;
+      var end = range.end || 100;
+      var total = klineData.length;
+      var startIdx = Math.round(total * start / 100);
+      var endIdx = Math.round(total * end / 100);
+      var startDate = klineData[Math.max(0, startIdx)] ? klineData[Math.max(0, startIdx)].date : '-';
+      var endDate = klineData[Math.min(total - 1, endIdx)] ? klineData[Math.min(total - 1, endIdx)].date : '-';
+      var el = document.getElementById('zoomRange');
+      if (el) el.textContent = '[' + startDate + ' → ' + endDate + ']';
+    }
+  });
+  // 初始化zoom显示
+  setTimeout(function() {
+    klineChart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
+  }, 100);
+
+  // 双击触发 — 用 mousedown 双触检测，兼容 candlestick + dataZoom
+  var clickCount = 0;
+  var clickTimer = null;
+  klineChart.getZr().on('mousedown', function(e) {
+    clickCount++;
+    if (clickCount === 1) {
+      clickTimer = setTimeout(function() {
+        clickCount = 0;
+      }, 300);
+    } else if (clickCount >= 2) {
+      clearTimeout(clickTimer);
+      clickCount = 0;
+      var pointInPixel = [e.offsetX, e.offsetY];
+      if (klineChart.containPixel('grid', pointInPixel)) {
+        var xIndex = klineChart.convertFromPixel({ seriesIndex: 0 }, pointInPixel)[0];
+        if (xIndex >= 0 && xIndex < klineData.length) {
+          selectDate(klineData[xIndex].date);
+        }
+      }
+    }
+  });
+}
+
+// ============ 选择日期，加载月差 ============
+async function selectDate(dateStr) {
+  // 优先从klineData中找索引（733条主力K线数据），再回退到allDates
+  currentIdx = klineData.findIndex(function(d) { return d.date === dateStr; });
+  if (currentIdx < 0) currentIdx = allDates.indexOf(dateStr);
+  document.getElementById('dateDetailCard').style.display = 'block';
+  document.getElementById('displayDate').textContent = dateStr;
+
+  // 加载当日月差
+  var resp = await fetch(API_BASE + '/date_spreads?date=' + dateStr + '&limit_months=12');
+  // 加载选中日期之前的最近5个交易日（相对基准，任意历史日期都有效）
+  var histResp = await fetch(API_BASE + '/historical_spreads?n_days=5&before_date=' + dateStr);
+  var allHistData = [];
+  if (histResp.ok) {
+    allHistData = await histResp.json();
+  }
+
+  // 构建相对于当前选中日期的历史数据
+  // 使用 allDates（全量交易日列表）作为主时间轴
+  var selectedAllIdx = allDates.indexOf(dateStr);
+  if (selectedAllIdx < 0) selectedAllIdx = allDates.length - 1;
+
+  // 取当前日期之前最近5个交易日作为历史对比
+  var targetHistCount = 5;
+  var relativeHistData = [];
+  var histCount = 0;
+  for (var bi = selectedAllIdx - 1; bi >= 0 && histCount < targetHistCount; bi--) {
+    var bDate = allDates[bi];
+    // 在allHistData中查找这一天
+    var found = null;
+    for (var ai = 0; ai < allHistData.length; ai++) {
+      if (allHistData[ai].date === bDate) {
+        found = allHistData[ai];
+        break;
+      }
+    }
+    if (found) {
+      relativeHistData.push(found);
+      histCount++;
+    }
+  }
+  // relativeHistData 现在是 T-N ... T-2 T-1（从远到近），和allHistData排序一致
+  // 每个histDay.date对应相对位置：relativeHistData[0]=T-n, ..., relativeHistData[n-1]=T-1
+  window.recentHistoricalData = relativeHistData;
+  window._selectedDate = dateStr;
+  // 同步 currentIdx 为 allDates 中的索引（用于前后导航）
+  currentIdx = selectedAllIdx;
+
+  // 加载当日数据并渲染
+  if (!resp.ok) {
+    document.getElementById('monthStats').innerHTML = '<div class="stat-box"><div class="value" style="color:#666">该日无月差数据</div></div>';
+    document.getElementById('spreadTableBody').innerHTML = '<tr><td colspan="6" style="color:#666;padding:20px;text-align:center">暂无数据 (该合约尚未上市)</td></tr>';
+    spreadCurveChart = null;
+    priceCurveChart = null;
+    spreadTrendChart = null;
+    ['spreadCurve', 'priceCurve', 'spreadTrendChart'].forEach(function(id) {
+      var dom = document.getElementById(id);
+      if (dom) { dom.innerHTML = '<div style="padding:40px;text-align:center;color:#666">该日无月差数据</div>'; }
+    });
+    return;
+  }
+  var data = await resp.json();
+  latestSpreadData = data;
+  renderDateDetail(data);
+}
+
+function loadDateDetail() {
+  if (latestSpreadData && latestSpreadData.date) {
+    selectDate(latestSpreadData.date);
+  }
+}
+
+// ============ 渲染日期详情 ============
+function renderDateDetail(data) {
+  // 合约数统计
+  document.getElementById('dateStats').innerHTML =
+    '<span>合约数: <b style="color:#e0e0f0">' + data.count + '</b></span>';
+
+  // 合约结算价卡片
+  var statsHtml = '';
+  var contracts = data.contracts || [];
+  var curve = data.curve_data || {};
+
+  // 结构统计
+  var contangoCount = 0;
+  var backwardCount = 0;
+  var spreads = data.spread_data || [];
+  for (var i = 0; i < spreads.length; i++) {
+    if (spreads[i].structure === 'contango') contangoCount++;
+    else backwardCount++;
+  }
+
+  statsHtml += '<div class="stat-box"><div class="label">正套(升水)</div><div class="value contango">' + contangoCount + ' 对</div></div>';
+  statsHtml += '<div class="stat-box"><div class="label">反套(贴水)</div><div class="value backwardation">' + backwardCount + ' 对</div></div>';
+
+  if (spreads.length > 0) {
+    var avgSpread = spreads.reduce(function(a, b) { return a + b.spread; }, 0) / spreads.length;
+    var maxSpread = Math.max.apply(null, spreads.map(function(s) { return s.spread; }));
+    var minSpread = Math.min.apply(null, spreads.map(function(s) { return s.spread; }));
+    statsHtml += '<div class="stat-box"><div class="label">平均价差</div><div class="value">' + Math.round(avgSpread) + '</div></div>';
+    statsHtml += '<div class="stat-box"><div class="label">最大价差</div><div class="value ' + (maxSpread >= 0 ? 'pos-color' : 'neg-color') + '">' + Math.round(maxSpread) + '</div></div>';
+    statsHtml += '<div class="stat-box"><div class="label">最小价差</div><div class="value ' + (minSpread >= 0 ? 'pos-color' : 'neg-color') + '">' + Math.round(minSpread) + '</div></div>';
+  }
+
+  // 合约结算价列表
+  for (var i = 0; i < contracts.length; i++) {
+    var c = contracts[i];
+    var short = c.symbol.slice(-4);
+    statsHtml += '<div class="stat-box"><div class="label">' + c.symbol + '</div><div class="value">' + c.settle.toLocaleString() + '</div></div>';
+  }
+  document.getElementById('monthStats').innerHTML = statsHtml;
+
+  // 渲染月差曲线 + 升贴水曲线
+  renderSpreadCurve(data);
+  renderPriceCurve(data);
+
+  // 渲染月差明细表
+  var tbody = document.getElementById('spreadTableBody');
+  var html = '';
+  if (spreads.length === 0) {
+    html = '<tr><td colspan="6" style="color:#666;padding:20px;text-align:center">数据不足，无法计算月差</td></tr>';
+  } else {
+    for (var i = 0; i < spreads.length; i++) {
+      var s = spreads[i];
+      var badgeCls = s.structure === 'contango' ? 'badge-contango' : 'badge-backwardation';
+      var badgeText = s.structure === 'contango' ? '升水' : '贴水';
+      var spreadColor = s.spread >= 0 ? 'pos-color' : 'neg-color';
+      html += '<tr>' +
+        '<td>' + s.near_symbol + ' / ' + s.far_symbol + '</td>' +
+        '<td class="pos-color">' + s.near_settle.toLocaleString() + '</td>' +
+        '<td class="neg-color">' + s.far_settle.toLocaleString() + '</td>' +
+        '<td class="' + spreadColor + '"><b>' + (s.spread >= 0 ? '+' : '') + s.spread + '</b></td>' +
+        '<td class="' + spreadColor + '">' + (s.spread_pct >= 0 ? '+' : '') + s.spread_pct + ' bp</td>' +
+        '<td><span class="spread-badge ' + badgeCls + '">' + badgeText + '</span></td>' +
+        '</tr>';
+    }
+  }
+  tbody.innerHTML = html;
+}
+
+// ============ 渲染月差曲线图（每个合约一条series，带图例） ============
+function renderSpreadCurve(data) {
+  var dom = document.getElementById('spreadCurve');
+  if (!dom) return;
+  echarts.dispose(dom);
+  dom.innerHTML = '';
+  spreadCurveChart = echarts.init(dom);
+
+  var contracts = data.contracts || [];
+  if (contracts.length === 0) {
+    spreadCurveChart.setOption({
+      grid: { left: 15, right: 15, top: 10, bottom: 20 },
+      xAxis: { type: 'category', data: [] },
+      yAxis: { type: 'value' },
+      series: []
+    });
+    return;
+  }
+
+  // 按月份排序
+  contracts.sort(function(a, b) { return a.sort_key[0] * 100 + a.sort_key[1] - (b.sort_key[0] * 100 + b.sort_key[1]); });
+
+  var series = [];
+  var legendData = [];
+  for (var i = 0; i < contracts.length; i++) {
+    var c = contracts[i];
+    var short = c.symbol.slice(-4);
+    legendData.push(c.symbol);
+    series.push({
+      name: c.symbol,
+      type: 'scatter',
+      xAxisIndex: 0,
+      yAxisIndex: 0,
+      data: [
+        { value: [short, c.settle], symbolSize: 8, itemStyle: { color: '#8888cc' } }
+      ],
+      label: {
+        show: true,
+        position: 'top',
+        fontSize: 9,
+        color: '#8888cc',
+        formatter: function(p) { return p.value[1].toLocaleString(); }
+      }
+    });
+  }
+
+  var xData = contracts.map(function(c) { return c.symbol.slice(-4); });
+
+  spreadCurveChart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#1a1a2e',
+      borderColor: '#2a2a4a',
+      textStyle: { color: '#d0d0d8', fontSize: 10 }
+    },
+    legend: {
+      data: legendData,
+      textStyle: { color: '#888', fontSize: 9 },
+      top: 0,
+      type: 'scroll'
+    },
+    grid: { left: 60, right: 15, top: 35, bottom: 50 },
+    xAxis: {
+      type: 'category',
+      data: xData,
+      axisLabel: { color: '#666', fontSize: 9, rotate: 35 },
+      axisLine: { lineStyle: { color: '#2a2a4a' } }
+    },
+    yAxis: {
+      type: 'value',
+      name: '结算价(元/吨)',
+      nameTextStyle: { color: '#666', fontSize: 9 },
+      axisLabel: { color: '#666', fontSize: 9 },
+      splitLine: { lineStyle: { color: '#1e1e30' } }
+    },
+    series: series
+  }, true);
+}
+
+// ============ 渲染升贴水曲线（每个交易日一条线 + 历史对比，图例为日期） ============
+function renderPriceCurve(data) {
+  var dom = document.getElementById('priceCurve');
+  if (!dom) return;
+  echarts.dispose(dom);
+  dom.innerHTML = '';
+  priceCurveChart = echarts.init(dom);
+
+  var contracts = data.contracts || [];
+  if (contracts.length === 0) {
+    priceCurveChart.setOption({
+      grid: { left: 55, right: 15, top: 10, bottom: 50 },
+      xAxis: { type: 'category', data: [] },
+      yAxis: { type: 'value' },
+      series: []
+    });
+    return;
+  }
+
+  // 按月份排序
+  contracts.sort(function(a, b) { return a.sort_key[0] * 100 + a.sort_key[1] - (b.sort_key[0] * 100 + b.sort_key[1]); });
+
+  // X轴：合约简写（按月份顺序）
+  var xData = contracts.map(function(c) { return c.symbol.slice(-4); });
+
+  // 构建当日升贴水曲线（使用 line 类型，连成连贯曲线）
+  var todaySeries = {
+    name: '当日 (' + (data.date || '').slice(5).replace('-', '/') + ')',
+    type: 'line',
+    xAxisIndex: 0,
+    yAxisIndex: 0,
+    smooth: 0.3,
+    symbol: 'circle',
+    symbolSize: 8,
+    lineStyle: { width: 2.5 },
+    itemStyle: { color: '#ffffff' },
+    emphasis: { itemStyle: { borderWidth: 3 } },
+    data: contracts.map(function(c, idx) {
+      var diff = Math.round((c.settle - contracts[0].settle) * 10) / 10;
+      return {
+        value: [idx, diff],
+        // 根据升贴水颜色标记散点
+        itemStyle: { color: diff >= 0 ? '#ff4444' : '#44ff44' }
+      };
+    }),
+    label: {
+      show: false
+    },
+    // 连接线的颜色：渐变（升水红→贴水绿）通过 areaStyle 统一
+    areaStyle: {
+      color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+        { offset: 0, color: 'rgba(255,68,68,0.08)' },
+        { offset: 0.5, color: 'rgba(136,136,204,0.02)' },
+        { offset: 1, color: 'rgba(68,255,68,0.08)' }
+      ])
+    }
+  };
+
+  var series = [todaySeries];
+  var legendData = [todaySeries.name];
+
+  // 历史日期配色：每根线独立颜色，视觉区分
+  var histColors = [
+    '#ff8844',  // 橙色 — T-1（最近）
+    '#44bbff',  // 蓝色 — T-2
+    '#aa88ff',  // 紫色 — T-3
+    '#44ddaa',  // 青绿 — T-4
+    '#ff6688',  // 粉红 — T-5
+    '#ffcc44',  // 黄色 — T-6
+    '#88cc44',  // 绿 — T-7
+  ];
+
+  // 添加历史数据（从recentHistoricalData加载，每个交易日一条线，各有独立颜色）
+  if (window.recentHistoricalData && window.recentHistoricalData.length > 0) {
+    for (var hi = 0; hi < window.recentHistoricalData.length; hi++) {
+      var histDay = window.recentHistoricalData[hi];
+      var histContracts = histDay.contracts || [];
+      var histBase = histContracts.length > 0 ? histContracts[0].settle : 0;
+
+      // 确保历史合约按sort_key排序
+      histContracts.sort(function(a, b) { return a.sort_key[0] * 100 + a.sort_key[1] - (b.sort_key[0] * 100 + b.sort_key[1]); });
+
+      // 构建该日的升贴水数据点
+      var histPoints = [];
+      for (var ci = 0; ci < histContracts.length; ci++) {
+        var hc = histContracts[ci];
+        var hDiff = Math.round((hc.settle - histBase) * 10) / 10;
+        histPoints.push([ci, hDiff]);
+      }
+
+      var histLabel = (histDay.date || '').replace(/-/g, '').slice(2);
+      var displayName = 'T-' + (hi + 1) + ' (' + histLabel + ')';
+      var lineColor = histColors[hi % histColors.length];
+      // 线透明度：越远越淡
+      var lineOpacity = Math.max(0.35, 0.85 - hi * 0.12);
+
+      legendData.push(displayName);
+
+      series.push({
+        name: displayName,
+        type: 'line',
+        xAxisIndex: 0,
+        yAxisIndex: 0,
+        smooth: 0.3,
+        symbol: 'none',
+        lineStyle: {
+          width: 1.5,
+          color: lineColor,
+          opacity: lineOpacity,
+          type: 'solid'
+        },
+        itemStyle: { color: lineColor, opacity: lineOpacity },
+        data: histPoints,
+        label: { show: false },
+        emphasis: {
+          lineStyle: { width: 2.5, opacity: 1 }
+        }
+      });
+    }
+  }
+
+  priceCurveChart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#1a1a2e',
+      borderColor: '#2a2a4a',
+      textStyle: { color: '#d0d0d8', fontSize: 10 },
+      formatter: function(params) {
+        if (!params || params.length === 0) return '';
+        var idx = params[0].dataIndex;
+        var html = '<b>合约 ' + xData[idx] + '</b><br/>';
+        for (var pi = 0; pi < params.length; pi++) {
+          var p = params[pi];
+          var val = p.value[1];
+          var sign = val >= 0 ? '+' : '';
+          var c = p.color || '#888';
+          html += p.marker + p.seriesName + ': <b style="color:' + c + '">' + sign + val.toFixed(0) + ' 元/吨</b><br/>';
+        }
+        return html;
+      }
+    },
+    legend: {
+      data: legendData,
+      textStyle: { color: '#888', fontSize: 9 },
+      top: 0,
+      type: 'scroll',
+      itemWidth: 12,
+      itemHeight: 8
+    },
+    grid: { left: 60, right: 15, top: 35, bottom: 50 },
+    xAxis: {
+      type: 'category',
+      data: xData,
+      axisLabel: { color: '#666', fontSize: 9, rotate: 35 },
+      axisLine: { lineStyle: { color: '#2a2a4a' } }
+    },
+    yAxis: {
+      type: 'value',
+      name: '相对最近月(元/吨)',
+      nameTextStyle: { color: '#666', fontSize: 9 },
+      axisLabel: { color: '#666', fontSize: 9 },
+      splitLine: { lineStyle: { color: '#1e1e30' } }
+    },
+    series: series
+  }, true);
+}
+
+// ============ 启动 ============
+init();
+</script>
+</body>
+</html>

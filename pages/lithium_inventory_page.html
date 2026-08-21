@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>锂电产业链A股存货库存监测</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#121212;color:#e0e0e0;font-family:'Microsoft YaHei',sans-serif;padding:16px}
+h1{text-align:center;color:#4fc3f7;font-size:22px;margin-bottom:8px}
+.subtitle{text-align:center;color:#888;font-size:12px;margin-bottom:16px}
+
+/* ── Sub Tabs (inside chart cards) ── */
+.sub-tabs{display:flex;gap:6px;margin-bottom:8px}
+.sub-tab{
+  padding:4px 14px;border-radius:4px;cursor:pointer;
+  font-size:12px;font-weight:500;border:1px solid #444;
+  background:transparent;color:#888;transition:all .2s;
+  user-select:none;
+}
+.sub-tab:hover{color:#ccc;border-color:#666}
+.sub-tab.active{color:#fff}
+.sub-tab[data-sector="全部"].active{background:#2a2a2a;border-color:#4fc3f7}
+.sub-tab[data-sector="上游"].active{background:#1b5e20;border-color:#66bb6a;color:#a5d6a7}
+.sub-tab[data-sector="中游"].active{background:#0d47a1;border-color:#42a5f5;color:#90caf9}
+.sub-tab[data-sector="下游"].active{background:#e65100;border-color:#ffa726;color:#ffcc80}
+/* Quarter tabs styling */
+.quarter-tab.active{background:#37474f;border-color:#78909c;color:#b0bec5}
+
+/* ── Grid ── */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.full{grid-column:1/-1}
+.card{background:#1e1e1e;border-radius:8px;padding:14px;border:1px solid #333}
+.card h2{color:#4fc3f7;font-size:14px;margin-bottom:8px;border-left:3px solid #4fc3f7;padding-left:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card h2 .sector-badge{
+  font-size:11px;padding:2px 8px;border-radius:4px;font-weight:400;
+}
+.chart{width:100%;height:380px}
+.chart-tall{height:460px}
+
+/* ── Company selector chips ── */
+.chips-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;max-height:60px;overflow-y:auto;padding:4px 0}
+.chip{
+  padding:3px 10px;border-radius:12px;font-size:12px;cursor:pointer;
+  border:1px solid #444;background:transparent;color:#aaa;transition:all .15s;
+  user-select:none;
+}
+.chip:hover{border-color:#888;color:#ddd}
+.chip.selected{color:#fff}
+.chip[data-sector*="上游"].selected{background:#1b5e20;border-color:#66bb6a;color:#a5d6a7}
+.chip[data-sector*="中游"].selected{background:#0d47a1;border-color:#42a5f5;color:#90caf9}
+.chip[data-sector*="下游"].selected{background:#e65100;border-color:#ffa726;color:#ffcc80}
+
+/* ── Table ── */
+.table-wrap{max-height:400px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#2a2a2a;color:#4fc3f7;position:sticky;top:0;padding:6px;text-align:center}
+td{padding:5px 6px;text-align:center;border-bottom:1px solid #2a2a2a}
+tr:hover td{background:#2a2a2a}
+.sector-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px}
+.upstream{background:#1b5e20;color:#66bb6a}
+.midstream{background:#0d47a1;color:#42a5f5}
+.downstream{background:#e65100;color:#ffa726}
+
+/* ── Actions bar ── */
+.actions{display:flex;gap:6px;margin-bottom:8px;align-items:center;flex-wrap:wrap}
+.btn{background:#2a2a2a;color:#ccc;border:1px solid #444;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px}
+.btn:hover{border-color:#4fc3f7;color:#fff}
+.btn.active{background:#4fc3f7;color:#121212;border-color:#4fc3f7}
+select.dark{background:#2a2a2a;color:#ccc;border:1px solid #444;padding:4px 8px;border-radius:4px;font-size:12px}
+.lbl{color:#888;font-size:12px}
+
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<h1>🔋 锂电产业链A股存货库存监测</h1>
+<div class="subtitle">数据来源: 上市公司季度财报 | 覆盖26家公司 | 数据从2018年起 | 上游-碳酸锂生产(矿/盐湖/加工) · 中游-正极/电解液/负极 · 下游-电池</div>
+
+<div class="grid">
+  <!-- Sector aggregate trend -->
+  <div class="card full">
+    <h2>📊 产业链板块存货汇总趋势 (亿元)</h2>
+    <div id="chartSectorTrend" class="chart"></div>
+  </div>
+
+  <!-- Inv/Asset % -->
+  <div class="card">
+    <h2>📈 板块存货/总资产占比 (%)</h2>
+    <div id="chartInvAsset" class="chart"></div>
+  </div>
+
+  <!-- Inv/Current % -->
+  <div class="card">
+    <h2>📈 板块存货/流动资产占比 (%)</h2>
+    <div id="chartInvCurrent" class="chart"></div>
+  </div>
+
+  <!-- Company bar rank -->
+  <div class="card full">
+    <h2>🏆 公司存货排名 (最新报告期)</h2>
+    <div id="chartCompanyBar" class="chart" style="height:320px"></div>
+  </div>
+
+  <!-- Individual stock inventory trend -->
+  <div class="card full">
+    <h2>📉 个股存货趋势 <span class="sector-badge" id="trendBadge"></span></h2>
+    <div class="sub-tabs" id="trendSubTabs">
+      <div class="sub-tab active" data-sector="全部">全部</div>
+      <div class="sub-tab" data-sector="上游">⛏ 上游</div>
+      <div class="sub-tab" data-sector="中游">🏭 中游</div>
+      <div class="sub-tab" data-sector="下游">🔋 下游</div>
+    </div>
+    <div class="chips-wrap" id="trendChips"></div>
+    <div id="chartCompanyTrend" class="chart chart-tall"></div>
+  </div>
+
+  <!-- Inventory-to-Revenue ratio (库销比) -->
+  <div class="card full">
+    <h2>📊 个股库销比趋势 (存货/营业收入) <span class="sector-badge" id="ratioBadge"></span></h2>
+    <div class="sub-tabs" id="ratioSubTabs">
+      <div class="sub-tab active" data-sector="全部">全部</div>
+      <div class="sub-tab" data-sector="上游">⛏ 上游</div>
+      <div class="sub-tab" data-sector="中游">🏭 中游</div>
+      <div class="sub-tab" data-sector="下游">🔋 下游</div>
+    </div>
+    <div class="sub-tabs" id="ratioQuarterTabs" style="margin-top:4px">
+      <div class="sub-tab quarter-tab active" data-quarter="全部">全季度</div>
+      <div class="sub-tab quarter-tab" data-quarter="Q1">仅Q1(3月)</div>
+      <div class="sub-tab quarter-tab" data-quarter="Q2">仅Q2(6月)</div>
+      <div class="sub-tab quarter-tab" data-quarter="Q3">仅Q3(9月)</div>
+      <div class="sub-tab quarter-tab" data-quarter="Q4">仅Q4(12月)</div>
+    </div>
+    <div class="chips-wrap" id="ratioChips"></div>
+    <div id="chartInvSalesRatio" class="chart chart-tall"></div>
+  </div>
+
+  <!-- Data table -->
+  <div class="card full">
+    <h2>📋 最新报告期数据明细</h2>
+    <div class="sub-tabs" id="tableSubTabs">
+      <div class="sub-tab active" data-sector="全部">全部</div>
+      <div class="sub-tab" data-sector="上游">⛏ 上游</div>
+      <div class="sub-tab" data-sector="中游">🏭 中游</div>
+      <div class="sub-tab" data-sector="下游">🔋 下游</div>
+    </div>
+    <div class="table-wrap">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>代码</th><th>公司</th><th>板块</th><th>报告期</th>
+            <th>存货(亿)</th><th>营收(亿)</th><th>库销比</th>
+            <th>存货/总资产%</th><th>存货/流动%</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="lithium_inventory_page.js?v=20260803v6"></script>
+</body>
+</html>
