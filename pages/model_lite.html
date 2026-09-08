@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎮 碳酸锂简化博弈推演 · Lite Model</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"></script>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--card2:#1c2333;--border:#30363d;--accent:#58a6ff;--text:#e6edf3;--text2:#8b949e;--green:#3fb950;--red:#f85149;--yellow:#d29922;--orange:#f97316;--purple:#bc8cff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;min-height:100vh;user-select:none;-webkit-user-select:none}
+input,button,select{user-select:auto}
+a{color:var(--accent);text-decoration:none}
+.header{background:linear-gradient(135deg,#161b22,#1c2333);padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.header a.home-btn{color:var(--text2);font-size:18px;padding:4px 8px;border-radius:6px}
+.header a.home-btn:hover{background:var(--border);color:var(--text)}
+.header h1{font-size:15px;flex:1}
+.header .badge{font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(88,166,255,.15);color:var(--accent)}
+.container{max-width:1200px;margin:0 auto;padding:12px}
+.note-box{background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.2);border-left:3px solid var(--accent);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;line-height:1.7;color:var(--text2)}
+.note-box b{color:var(--accent)}
+.grid-2col{display:grid;grid-template-columns:340px 1fr;gap:12px}
+@media(max-width:900px){.grid-2col{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px}
+.panel h2{font-size:13px;font-weight:700;margin-bottom:10px;color:var(--accent);border-bottom:1px solid var(--border);padding-bottom:6px}
+.param-group{margin-bottom:14px}
+.param-group label{display:block;font-size:11px;color:var(--text2);margin-bottom:3px}
+.param-row{display:flex;align-items:center;gap:8px}
+.param-row input[type="range"]{flex:1;accent-color:var(--accent)}
+.param-row input[type="number"]{width:80px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:12px;padding:3px 6px;border-radius:4px;text-align:right}
+.param-row .val{font-size:12px;color:var(--accent);min-width:50px;text-align:right;font-weight:600}
+.agent-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;padding:4px 6px;border-radius:4px;background:var(--bg)}
+.agent-row .icon{font-size:14px;width:20px;text-align:center}
+.agent-row .name{font-size:11px;font-weight:600;min-width:60px}
+.agent-row input[type="range"]{flex:1;accent-color:var(--accent)}
+.agent-row .score{font-size:11px;font-weight:700;min-width:30px;text-align:right}
+.agent-row.bull{border-left:2px solid var(--green)}
+.agent-row.bear{border-left:2px solid var(--red)}
+.agent-row.neutral{border-left:2px solid var(--yellow)}
+.btn-row{display:flex;gap:8px;margin-top:10px}
+.btn{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--card2);color:var(--text);transition:all .15s}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:rgba(88,166,255,.15);color:var(--accent);border-color:rgba(88,166,255,.3)}
+.btn.warn{background:rgba(210,153,34,.12);color:var(--yellow);border-color:rgba(210,153,34,.25)}
+.chart-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px}
+.chart-box h3{font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text2)}
+#chart-bar{height:280px}
+#chart-pie{height:200px}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;margin-bottom:10px}
+.summary-cell{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;text-align:center}
+.summary-cell .label{font-size:10px;color:var(--text2)}
+.summary-cell .value{font-size:18px;font-weight:800;margin-top:2px}
+.summary-cell.bull .value{color:var(--green)}
+.summary-cell.bear .value{color:var(--red)}
+.summary-cell.neutral .value{color:var(--yellow)}
+.assumptions{font-size:11px;line-height:1.8;color:var(--text2);max-height:200px;overflow-y:auto;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px}
+.assumptions b{color:var(--text)}
+.footer{margin-top:20px;padding:12px;border-top:1px solid var(--border);font-size:11px;color:var(--text2);text-align:center}
+</style>
+</head>
+<body>
+<div class="header">
+  <a href="../index.html" class="home-btn">&#8592;</a>
+  <h1>🎮 碳酸锂简化博弈推演 · Lite Model</h1>
+  <span class="badge">v1.0 简化版</span>
+</div>
+<div class="container">
+
+<div class="note-box">
+  <b>📌 这是简化版</b> — 把 7 主体博弈模型压缩为「价格 vs 成本 vs 库存」三因子推演。
+  调整左侧参数滑块，右侧自动刷新预测结果。完整版（含博弈因子、信号互动、7 维评分）见
+  <a href="battlefield_agents.html">Agent Dashboard</a>。
+  参数说明见 <a href="https://github.com/algo23-yunqingtian/lithium-engine/tree/main/model_lite" target="_blank">model_lite/ 文件夹</a>。
+</div>
+
+<div class="grid-2col">
+
+<!-- Left: Parameters -->
+<div>
+<div class="panel">
+  <h2>📊 基础参数</h2>
+
+  <div class="param-group">
+    <label>当前期货价格 (元/吨)</label>
+    <div class="param-row">
+      <input type="range" id="price" min="50000" max="250000" step="1000" value="75000">
+      <input type="number" id="price-num" min="50000" max="250000" step="1000" value="75000">
+    </div>
+  </div>
+
+  <div class="param-group">
+    <label>成本线 (元/吨)</label>
+    <div class="param-row">
+      <input type="range" id="cost" min="40000" max="200000" step="1000" value="125000">
+      <input type="number" id="cost-num" min="40000" max="200000" step="1000" value="125000">
+    </div>
+  </div>
+
+  <div class="param-group">
+    <label>库存水平 (万吨)</label>
+    <div class="param-row">
+      <input type="range" id="inventory" min="1" max="30" step="0.5" value="8">
+      <input type="number" id="inventory-num" min="1" max="30" step="0.5" value="8">
+    </div>
+  </div>
+
+  <div class="param-group">
+    <label>政策锚 — 干预价 (元/吨)</label>
+    <div class="param-row">
+      <input type="range" id="policy-cap" min="100000" max="300000" step="1000" value="160000">
+      <input type="number" id="policy-cap-num" min="100000" max="300000" step="1000" value="160000">
+    </div>
+  </div>
+
+  <div class="param-group">
+    <label>政策锚 — 托底价 (元/吨)</label>
+    <div class="param-row">
+      <input type="range" id="policy-floor" min="30000" max="150000" step="1000" value="130000">
+      <input type="number" id="policy-floor-num" min="30000" max="150000" step="1000" value="130000">
+    </div>
+  </div>
+
+  <div class="param-group">
+    <label>现货升贴水 (元/吨，正=升水)</label>
+    <div class="param-row">
+      <input type="range" id="basis" min="-5000" max="5000" step="100" value="0">
+      <input type="number" id="basis-num" min="-5000" max="5000" step="100" value="0">
+    </div>
+  </div>
+
+  <div class="param-group">
+    <label>日成交量 (手)</label>
+    <div class="param-row">
+      <input type="range" id="volume" min="5000" max="200000" step="1000" value="30000">
+      <input type="number" id="volume-num" min="5000" max="200000" step="1000" value="30000">
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>🧠 7 主体观点调节</h2>
+  <div id="agent-sliders"></div>
+  <div class="btn-row">
+    <button class="btn primary" onclick="runSimulation()">▶ 运行推演</button>
+    <button class="btn" onclick="resetAgents()">↻ 重置</button>
+    <button class="btn warn" onclick="exportParams()">⬇ 导出参数</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>📐 模型假设</h2>
+  <div class="assumptions" id="assumptions-text">
+<b>1. 价格-成本差</b>：期货价 < 成本线 → 矿商减产预期（利多）；期货价 > 成本线 ×1.2 → 高利润→增产（利空）<br>
+<b>2. 库存因子</b>：库存 < 5万吨 → 紧张（利多）；> 15万吨 → 充裕（利空）<br>
+<b>3. 政策锚</b>：价格 < 托底价 → 政策托底预期；> 干预价 → 政策调控预期<br>
+<b>4. 现货升贴水</b>：升水 > 1000 → 现货紧张；贴水 > 2000 → 现货宽松<br>
+<b>5. 主体权重</b>：机构 30% / 冶炼厂 20% / 贸易商 15% / 矿商 15% / 散户 10% / 套利 5% / 政策 5%<br>
+<b>6. 惯性钳制</b>：单日观点变化 ±20；止损 8%；止盈 15%<br>
+<b>7. 博弈修正</b>：观点总分 ±10 修正上限<br>
+<br>
+<i>详细参数文档见 model_lite/params.json 和 model_lite/ASSUMPTIONS.md</i>
+  </div>
+</div>
+
+</div>
+
+<!-- Right: Results -->
+<div>
+<div class="summary-grid" id="summary-grid"></div>
+
+<div class="chart-box">
+  <h3>主体观点评分 (±100)</h3>
+  <div id="chart-bar"></div>
+</div>
+
+<div class="chart-box">
+  <h3>多空力量对比</h3>
+  <div id="chart-pie"></div>
+</div>
+
+<div class="chart-box">
+  <h3>综合信号</h3>
+  <div id="signal-output" style="font-size:13px;line-height:1.8;padding:8px"></div>
+</div>
+
+</div>
+</div>
+
+<div class="footer">
+  碳酸锂简化博弈推演 v1.0 · 参数文件：model_lite/params.json · 
+  <a href="https://github.com/algo23-yunqingtian/lithium-engine" target="_blank">引擎仓库</a> ·
+  <a href="battlefield_agents.html">完整版 Agent Dashboard</a> ·
+  <a href="../index.html">返回导航</a>
+</div>
+
+</div>
+
+<script>
+const AGENTS = [
+  {id:'institution',icon:'🏦',name:'机构',weight:0.30,clamp:[-70,70],infoSens:0.7,behavSens:0.6,logic:'趋势跟随/动量'},
+  {id:'smelter',icon:'🏭',name:'冶炼厂',weight:0.20,clamp:[-60,80],infoSens:0.3,behavSens:0.2,logic:'价涨增产→空,价跌减产→多'},
+  {id:'merchant',icon:'🚚',name:'贸易商',weight:0.15,clamp:[-50,60],infoSens:0.5,behavSens:0.5,logic:'月差结构→持有/抛售'},
+  {id:'resource',icon:'⛏️',name:'矿商',weight:0.15,clamp:[-50,70],infoSens:0.3,behavSens:0.2,logic:'价格贴成本→减产→多'},
+  {id:'retail',icon:'👥',name:'散户',weight:0.10,clamp:[-60,60],infoSens:0.9,behavSens:0.9,logic:'情绪驱动/追涨杀跌'},
+  {id:'arbitrage',icon:'⚖️',name:'套利商',weight:0.05,clamp:[-20,20],infoSens:0.6,behavSens:0.4,logic:'月差均值回归'},
+  {id:'policy',icon:'🏛️',name:'政策',weight:0.05,clamp:[-60,60],infoSens:0.2,behavSens:0.1,logic:'政策关键词+价格区间'},
+];
+
+const DEFAULT_SCORES = {institution:0,smelter:0,merchant:0,resource:0,retail:0,arbitrage:0,policy:0};
+let agentScores = {...DEFAULT_SCORES};
+let charts = {bar:null, pie:null};
+
+// Build agent sliders
+function buildAgentSliders(){
+  const wrap = document.getElementById('agent-sliders');
+  wrap.innerHTML = AGENTS.map(a=>`
+    <div class="agent-row" id="row-${a.id}">
+      <span class="icon">${a.icon}</span>
+      <span class="name">${a.name}</span>
+      <input type="range" id="slider-${a.id}" min="-100" max="100" step="5" value="0"
+        oninput="updateAgent('${a.id}',this.value)">
+      <span class="score" id="score-${a.id}">0</span>
+    </div>
+  `).join('');
+}
+
+function updateAgent(id,val){
+  agentScores[id]=parseInt(val);
+  document.getElementById('score-'+id).textContent=val;
+  const row=document.getElementById('row-'+id);
+  const v=parseInt(val);
+  row.className='agent-row '+(v>15?'bull':v<-15?'bear':'neutral');
+  runSimulation();
+}
+
+function resetAgents(){
+  agentScores={...DEFAULT_SCORES};
+  AGENTS.forEach(a=>{
+    document.getElementById('slider-'+a.id).value=0;
+    document.getElementById('score-'+a.id).textContent='0';
+    document.getElementById('row-'+a.id).className='agent-row neutral';
+  });
+  runSimulation();
+}
+
+function getParam(id){
+  return parseFloat(document.getElementById(id).value);
+}
+
+function syncInput(rangeId, numId){
+  const r=document.getElementById(rangeId);
+  const n=document.getElementById(numId);
+  r.addEventListener('input',()=>{n.value=r.value;runSimulation()});
+  n.addEventListener('input',()=>{r.value=n.value;runSimulation()});
+}
+
+// Core simulation
+function runSimulation(){
+  const price=getParam('price');
+  const cost=getParam('cost');
+  const inv=getParam('inventory');
+  const polCap=getParam('policy-cap');
+  const polFloor=getParam('policy-floor');
+  const basis=getParam('basis');
+  const volume=getParam('volume');
+
+  // Factor signals (-100 to +100)
+  const priceCostDiff = price - cost;
+  const fPriceCost = priceCostDiff > 0 ? Math.min(50, priceCostDiff/2000) : Math.max(-50, priceCostDiff/2000);
+  const fInventory = inv < 5 ? 40 : inv > 15 ? -40 : (10-inv)*8;
+  const fPolicy = price < polFloor ? 30 : price > polCap ? -30 : 0;
+  const fBasis = basis > 1000 ? 20 : basis < -2000 ? -20 : basis/100;
+
+  // Auto-calculate agent scores based on factors (if not manually overridden)
+  const autoScores = {
+    institution: Math.round(fPriceCost * 0.5 + fBasis * 0.3),  // trend follower
+    smelter: Math.round(-fPriceCost * 0.6),  // price up = bearish (增产)
+    merchant: Math.round(fBasis * 0.8 + fInventory * 0.2),  // basis driven
+    resource: Math.round(-fPriceCost * 0.5 + (price < cost ? 30 : 0)),  // below cost = bullish
+    retail: Math.round(fPriceCost * 0.3 + fBasis * 0.2),  // emotion driven
+    arbitrage: Math.round(-fBasis * 0.5),  // mean reversion
+    policy: fPolicy,  // policy anchor
+  };
+
+  // Blend: use manual score if set, otherwise use auto
+  const finalScores = {};
+  AGENTS.forEach(a=>{
+    const manual = agentScores[a.id] || 0;
+    const auto = autoScores[a.id] || 0;
+    // If manual is 0 and was never touched, use auto; otherwise blend
+    finalScores[a.id] = manual !== 0 ? Math.max(a.clamp[0], Math.min(a.clamp[1], manual)) : Math.max(a.clamp[0], Math.min(a.clamp[1], auto));
+  });
+
+  // Weighted average
+  let weighted = 0;
+  AGENTS.forEach(a=>{ weighted += finalScores[a.id] * a.weight; });
+  weighted = Math.round(Math.max(-10, Math.min(10, weighted)));  // game correction cap
+
+  // Update summary
+  const bull = AGENTS.filter(a=>finalScores[a.id]>15).length;
+  const bear = AGENTS.filter(a=>finalScores[a.id]<-15).length;
+  const neutral = 7 - bull - bear;
+
+  document.getElementById('summary-grid').innerHTML = `
+    <div class="summary-cell ${weighted>5?'bull':weighted<-5?'bear':'neutral'}">
+      <div class="label">综合评分</div>
+      <div class="value">${weighted>0?'+':''}${weighted}</div>
+    </div>
+    <div class="summary-cell bull">
+      <div class="label">看多主体</div>
+      <div class="value">${bull}</div>
+    </div>
+    <div class="summary-cell bear">
+      <div class="label">看空主体</div>
+      <div class="value">${bear}</div>
+    </div>
+    <div class="summary-cell neutral">
+      <div class="label">中性主体</div>
+      <div class="value">${neutral}</div>
+    </div>
+    <div class="summary-cell">
+      <div class="label">价格/成本</div>
+      <div class="value" style="font-size:14px">${(price/cost).toFixed(2)}</div>
+    </div>
+  `;
+
+  // Bar chart
+  if(!charts.bar) charts.bar = echarts.init(document.getElementById('chart-bar'));
+  charts.bar.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis'},
+    xAxis:{type:'category',data:AGENTS.map(a=>a.icon+a.name),axisLabel:{color:'#8b949e',fontSize:10}},
+    yAxis:{type:'value',min:-100,max:100,axisLabel:{color:'#8b949e'}},
+    series:[{
+      type:'bar',
+      data:AGENTS.map(a=>{
+        const v=finalScores[a.id];
+        return {value:v,itemStyle:{color:v>15?'#3fb950':v<-15?'#f85149':'#d29922'}};
+      }),
+      label:{show:true,position:'top',color:'#e6edf3',fontSize:10,formatter:'{c}'},
+      barWidth:'50%'
+    }]
+  });
+
+  // Pie chart
+  if(!charts.pie) charts.pie = echarts.init(document.getElementById('chart-pie'));
+  const totalLong = AGENTS.filter(a=>finalScores[a.id]>0).reduce((s,a)=>s+Math.abs(finalScores[a.id]),0);
+  const totalShort = AGENTS.filter(a=>finalScores[a.id]<0).reduce((s,a)=>s+Math.abs(finalScores[a.id]),0);
+  charts.pie.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'item'},
+    series:[{
+      type:'pie',radius:['40%','70%'],
+      data:[
+        {value:totalLong,name:'多方力量',itemStyle:{color:'#3fb950'}},
+        {value:totalShort,name:'空方力量',itemStyle:{color:'#f85149'}},
+      ],
+      label:{color:'#8b949e',fontSize:11}
+    }]
+  });
+
+  // Signal output
+  let signal = '';
+  if(weighted > 5) signal = '<span style="color:#3fb950;font-weight:700">🟢 偏多</span>';
+  else if(weighted < -5) signal = '<span style="color:#f85149;font-weight:700">🔴 偏空</span>';
+  else signal = '<span style="color:#d29922;font-weight:700">🟡 中性</span>';
+
+  let factors = [];
+  if(fPriceCost > 10) factors.push('高利润（增产预期）');
+  else if(fPriceCost < -10) factors.push('亏损减产（利多）');
+  if(fInventory > 20) factors.push('库存紧张');
+  else if(fInventory < -20) factors.push('库存充裕');
+  if(fPolicy > 0) factors.push('政策托底预期');
+  else if(fPolicy < 0) factors.push('政策调控预期');
+  if(fBasis > 10) factors.push('现货升水（紧张）');
+  else if(fBasis < -10) factors.push('现货贴水（宽松）');
+
+  document.getElementById('signal-output').innerHTML = `
+    <div style="font-size:16px;margin-bottom:8px">综合信号: ${signal}</div>
+    <div style="color:#8b949e;margin-bottom:6px">活跃因子:</div>
+    <div>${factors.length?factors.map(f=>'• '+f).join('<br>'): '• 无显著因子'}</div>
+    <div style="margin-top:8px;color:#8b949e;font-size:11px">成交量: ${volume.toLocaleString()}手 | 价格: ${price.toLocaleString()} | 成本: ${cost.toLocaleString()}</div>
+  `;
+}
+
+function exportParams(){
+  const params = {
+    price:getParam('price'), cost:getParam('cost'), inventory:getParam('inventory'),
+    policy_cap:getParam('policy-cap'), policy_floor:getParam('policy-floor'),
+    basis:getParam('basis'), volume:getParam('volume'),
+    agent_scores:agentScores,
+    timestamp:new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(params,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='model_lite_params.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Init
+['price','cost','inventory','policy-cap','policy-floor','basis','volume'].forEach(id=>{
+  syncInput(id, id+'-num');
+});
+buildAgentSliders();
+runSimulation();
+
+// Anti-copy
+document.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('selectstart',e=>e.preventDefault());
+document.addEventListener('copy',e=>e.preventDefault());
+document.addEventListener('keydown',e=>{
+  if(e.key==='F12'||(e.ctrlKey&&['s','p','c','u'].includes(e.key.toLowerCase())))e.preventDefault();
+});
+
+// Resize
+window.addEventListener('resize',()=>{
+  if(charts.bar)charts.bar.resize();
+  if(charts.pie)charts.pie.resize();
+});
+</script>
+</body>
+</html>
