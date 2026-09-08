@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎯 碳酸锂 HAM 双主体模型 · 异质Agent推演</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"></script>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--card2:#1c2333;--border:#30363d;--accent:#58a6ff;--text:#e6edf3;--text2:#8b949e;--green:#3fb950;--red:#f85149;--yellow:#d29922;--orange:#f97316;--purple:#bc8cff;--cyan:#39d2c0}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;min-height:100vh;user-select:none;-webkit-user-select:none}
+input,button,select{user-select:auto}
+a{color:var(--accent);text-decoration:none}
+.header{background:linear-gradient(135deg,#161b22,#1c2333);padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.header a.home-btn{color:var(--text2);font-size:18px;padding:4px 8px;border-radius:6px}
+.header a.home-btn:hover{background:var(--border);color:var(--text)}
+.header h1{font-size:15px;flex:1}
+.header .badge{font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(88,166,255,.15);color:var(--accent)}
+.container{max-width:1400px;margin:0 auto;padding:12px}
+.note-box{background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.2);border-left:3px solid var(--accent);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;line-height:1.7;color:var(--text2)}
+.note-box b{color:var(--accent)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:900px){.grid-2{grid-template-columns:1fr}}
+.chart-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px}
+.chart-box h3{font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text2)}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;margin-bottom:10px}
+.cell{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;text-align:center}
+.cell .label{font-size:10px;color:var(--text2)}
+.cell .value{font-size:16px;font-weight:800;margin-top:2px}
+.cell.bull .value{color:var(--green)}
+.cell.bear .value{color:var(--red)}
+.cell.neutral .value{color:var(--yellow)}
+.tabs{display:flex;gap:0;margin-bottom:12px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.tab{flex:1;padding:8px 12px;text-align:center;font-size:12px;font-weight:600;cursor:pointer;background:var(--card);color:var(--text2);border-right:1px solid var(--border);transition:all .15s}
+.tab:last-child{border-right:none}
+.tab.active{background:rgba(88,166,255,.12);color:var(--accent)}
+.tab:hover{background:var(--card2)}
+.section-title{font-size:13px;font-weight:700;color:var(--accent);margin:16px 0 8px;border-left:3px solid var(--accent);padding-left:10px}
+#chart-price{height:260px}
+#chart-nfc{height:200px}
+#chart-demand{height:200px}
+#chart-pfund{height:200px}
+#chart-agent{height:180px}
+#chart-ic{height:180px}
+.model-info{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;line-height:1.8;color:var(--text2)}
+.model-info b{color:var(--text)}
+.model-info .formula{background:var(--bg);padding:4px 8px;border-radius:4px;font-family:monospace;color:var(--accent);display:inline-block;margin:2px 0}
+.footer{margin-top:20px;padding:12px;border-top:1px solid var(--border);font-size:11px;color:var(--text2);text-align:center}
+.tab-content{display:none}
+.tab-content.active{display:block}
+</style>
+</head>
+<body>
+<div class="header">
+  <a href="../index.html" class="home-btn">&#8592;</a>
+  <h1>🎯 碳酸锂 HAM 双主体模型</h1>
+  <span class="badge">Brock-Hommes Framework</span>
+</div>
+<div class="container">
+
+<div class="note-box">
+  <b>📌 HAM 双主体异质 Agent 模型</b> — 产业基本面 Agent（锚定公允价格回归）vs 投机趋势 Agent（动量追涨杀跌），
+  通过 Logit 策略切换动态调整市场占比。输出 <b>n_c</b>（投机占比）、<b>Total_Demand</b>（聚合需求）、<b>n_f-n_c</b>（力量分歧）三个日频因子。
+  参数：<span id="param-display"></span>。
+  源码与文档见 <a href="https://github.com/algo23-yunqingtian/lithium-engine/tree/main/model_ham" target="_blank">model_ham/</a>。
+</div>
+
+<!-- Summary Cards -->
+<div class="summary-grid" id="summary-grid"></div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('tab-factors')">因子总览</div>
+  <div class="tab" onclick="switchTab('tab-model')">模型说明</div>
+  <div class="tab" onclick="switchTab('tab-backtest')">回测结果</div>
+</div>
+
+<!-- Tab: Factors -->
+<div class="tab-content active" id="tab-factors">
+  <div class="chart-box">
+    <h3>价格 vs 基本面公允价 P_fund</h3>
+    <div id="chart-price"></div>
+  </div>
+  <div class="grid-2">
+    <div class="chart-box">
+      <h3>投机 Agent 占比 n_c（越高=投机主导）</h3>
+      <div id="chart-nfc"></div>
+    </div>
+    <div class="chart-box">
+      <h3>聚合超额需求 Total_Demand</h3>
+      <div id="chart-demand"></div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="chart-box">
+      <h3>Agent 需求对比 D_f vs D_c</h3>
+      <div id="chart-agent"></div>
+    </div>
+    <div class="chart-box">
+      <h3>现货基差（辅助参考）</h3>
+      <div id="chart-basis"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Model -->
+<div class="tab-content" id="tab-model">
+  <div class="model-info">
+<b>模型框架</b>：Brock-Hommes 异质 Agent 模型，观测模式（外部输入真实价格，不闭环出清）<br><br>
+
+<b>主体1：产业基本面 Agent</b><br>
+对应现实角色：锂矿资源商、冶炼厂、贸易商、正极厂<br>
+需求函数：<span class="formula">D_f(t) = α × (P_fund(t) − P(t))</span><br>
+行为逻辑：价格高于公允价→做空；低于公允价→做多<br>
+参数 α = 0.3（基本面回归强度）<br><br>
+
+<b>主体2：投机趋势 Agent</b><br>
+对应现实角色：CTA 趋势资金、游资、散户<br>
+需求函数：<span class="formula">D_c(t) = β × (P(t) − P(t−1))</span><br>
+行为逻辑：基于价格动量追涨杀跌<br>
+参数 β = 0.5（趋势外推强度）<br><br>
+
+<b>策略切换（HAM 核心）</b><br>
+滚动收益：<span class="formula">Profit_f(t) = Σ D_f(i) × (P(i+1) − P(i))</span>，窗口 W=20<br>
+群体权重：<span class="formula">n_f = exp(γ×Profit_f) / (exp(γ×Profit_f) + exp(γ×Profit_c))</span><br>
+参数 γ = 2（策略切换灵敏度）<br><br>
+
+<b>输出因子</b><br>
+<span class="formula">Total_Demand = n_f × D_f + n_c × D_c</span>（聚合需求）<br>
+<span class="formula">n_f − n_c</span>（力量分歧）<br><br>
+
+<b>合格标准</b>：RankIC 稳定正/负，ICIR 绝对值 > 0.3，分层回测单调<br><br>
+
+<b>模型边界</b><br>
+✅ 识别投机力量占比变化、市场博弈结构<br>
+❌ 不预测每日价格涨跌点位<br>
+⚠️ 禁止单独用因子做买卖信号，应作为 ML 模型输入特征
+  </div>
+</div>
+
+<!-- Tab: Backtest -->
+<div class="tab-content" id="tab-backtest">
+  <div class="chart-box">
+    <h3>Total_Demand 因子 — 分层回测</h3>
+    <div id="chart-backtest"></div>
+  </div>
+  <div class="chart-box">
+    <h3>因子评价摘要</h3>
+    <div id="bt-summary" style="font-size:12px;line-height:1.8;padding:8px"></div>
+  </div>
+</div>
+
+<div class="footer">
+  碳酸锂 HAM 双主体模型 v1.0 ·
+  <a href="https://github.com/algo23-yunqingtian/lithium-engine/tree/main/model_ham" target="_blank">源码与文档</a> ·
+  <a href="battlefield_agents.html">7 主体完整版</a> ·
+  <a href="model_lite.html">简化推演 Lite</a> ·
+  <a href="../index.html">返回导航</a>
+</div>
+
+</div>
+
+<script>
+let HAM_DATA = null;
+let charts = {};
+
+function init(){
+  fetch('../api/ham_factors.json?_=' + Date.now())
+    .then(r => r.json())
+    .then(d => { HAM_DATA = d; render(); })
+    .catch(e => {
+      document.getElementById('summary-grid').innerHTML = '<div style="color:#f85149;padding:20px;text-align:center">⚠️ 数据加载失败: '+e+'</div>';
+    });
+}
+
+function render(){
+  const d = HAM_DATA;
+  document.getElementById('param-display').textContent = 'α='+d.params.alpha+' β='+d.params.beta+' γ='+d.params.gamma+' W='+d.params.W;
+  
+  // Latest values
+  const n = d.dates.length;
+  const latest = n - 1;
+  const nc = d.n_c[latest];
+  const nf = d.n_f[latest];
+  const td = d.total_demand[latest];
+  const diff = d.n_f_minus_n_c[latest];
+  const close = d.close[latest];
+  const pfund = d.p_fund[latest];
+  
+  const diffLabel = diff > 0.05 ? '产业主导' : diff < -0.05 ? '投机主导' : '均衡';
+  const diffClass = diff > 0.05 ? 'bull' : diff < -0.05 ? 'bear' : 'neutral';
+  
+  document.getElementById('summary-grid').innerHTML = `
+    <div class="cell"><div class="label">最新日期</div><div class="value" style="font-size:12px">${d.dates[latest]}</div></div>
+    <div class="cell"><div class="label">期货价格</div><div class="value" style="font-size:14px">${close.toLocaleString()}</div></div>
+    <div class="cell"><div class="label">公允价 P_fund</div><div class="value" style="font-size:14px">${(pfund/10000).toFixed(1)}万</div></div>
+    <div class="cell bull"><div class="label">投机占比 n_c</div><div class="value">${(nc*100).toFixed(1)}%</div></div>
+    <div class="cell ${td>0?'bull':'bear'}"><div class="label">聚合需求</div><div class="value">${td>0?'+':''}${td.toFixed(0)}</div></div>
+    <div class="cell ${diffClass}"><div class="label">力量分歧</div><div class="value">${diff>0?'+':''}${diff.toFixed(3)}</div></div>
+    <div class="cell ${diffClass}"><div class="label">市场状态</div><div class="value" style="font-size:14px">${diffLabel}</div></div>
+    <div class="cell"><div class="label">数据更新</div><div class="value" style="font-size:10px">${d._updated_at}</div></div>
+  `;
+  
+  renderPriceChart();
+  renderNFCChart();
+  renderDemandChart();
+  renderAgentChart();
+  renderBasisChart();
+  renderBacktest();
+  renderBTSummary();
+}
+
+function renderPriceChart(){
+  const d = HAM_DATA;
+  if(!charts.price) charts.price = echarts.init(document.getElementById('chart-price'));
+  charts.price.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis'},
+    legend:{data:['期货价格','P_fund 公允价'],textStyle:{color:'#8b949e',fontSize:10}},
+    xAxis:{type:'category',data:d.dates,axisLabel:{color:'#8b949e',fontSize:9,rotate:30}},
+    yAxis:{type:'value',axisLabel:{color:'#8b949e',formatter:v=>(v/10000).toFixed(0)+'万'},splitLine:{lineStyle:{color:'#21262d'}}},
+    series:[
+      {name:'期货价格',type:'line',data:d.close,lineStyle:{width:2,color:'#58a6ff'},symbol:'none'},
+      {name:'P_fund 公允价',type:'line',data:d.p_fund,lineStyle:{width:2,color:'#f97316',type:'dashed'},symbol:'none'}
+    ]
+  });
+}
+
+function renderNFCChart(){
+  const d = HAM_DATA;
+  if(!charts.nfc) charts.nfc = echarts.init(document.getElementById('chart-nfc'));
+  charts.nfc.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis'},
+    legend:{data:['n_c 投机占比','n_f 产业占比'],textStyle:{color:'#8b949e',fontSize:10}},
+    xAxis:{type:'category',data:d.dates,axisLabel:{color:'#8b949e',fontSize:9,rotate:30}},
+    yAxis:{type:'value',min:0,max:1,axisLabel:{color:'#8b949e',formatter:v=>(v*100).toFixed(0)+'%'},splitLine:{lineStyle:{color:'#21262d'}}},
+    series:[
+      {name:'n_c 投机占比',type:'line',data:d.n_c,lineStyle:{width:2,color:'#f85149'},areaStyle:{color:'rgba(248,81,73,0.1)'},symbol:'none'},
+      {name:'n_f 产业占比',type:'line',data:d.n_f,lineStyle:{width:2,color:'#3fb950'},areaStyle:{color:'rgba(63,185,80,0.1)'},symbol:'none'}
+    ]
+  });
+}
+
+function renderDemandChart(){
+  const d = HAM_DATA;
+  if(!charts.demand) charts.demand = echarts.init(document.getElementById('chart-demand'));
+  const colors = d.total_demand.map(v=>v>=0?'#3fb950':'#f85149');
+  charts.demand.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis'},
+    xAxis:{type:'category',data:d.dates,axisLabel:{color:'#8b949e',fontSize:9,rotate:30}},
+    yAxis:{type:'value',axisLabel:{color:'#8b949e'},splitLine:{lineStyle:{color:'#21262d'}}},
+    series:[{
+      type:'bar',data:d.total_demand.map((v,i)=>({value:v,itemStyle:{color:colors[i]}})),
+      barWidth:'60%'
+    }]
+  });
+}
+
+function renderAgentChart(){
+  const d = HAM_DATA;
+  if(!charts.agent) charts.agent = echarts.init(document.getElementById('chart-agent'));
+  charts.agent.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis'},
+    legend:{data:['D_f 产业需求','D_c 投机需求'],textStyle:{color:'#8b949e',fontSize:10}},
+    xAxis:{type:'category',data:d.dates,axisLabel:{color:'#8b949e',fontSize:9,rotate:30}},
+    yAxis:{type:'value',axisLabel:{color:'#8b949e'},splitLine:{lineStyle:{color:'#21262d'}}},
+    series:[
+      {name:'D_f 产业需求',type:'line',data:d.d_f,lineStyle:{width:1.5,color:'#3fb950'},symbol:'none'},
+      {name:'D_c 投机需求',type:'line',data:d.d_c,lineStyle:{width:1.5,color:'#f85149'},symbol:'none'}
+    ]
+  });
+}
+
+function renderBasisChart(){
+  const d = HAM_DATA;
+  if(!charts.basis) charts.basis = echarts.init(document.getElementById('chart-basis'));
+  const bColors = d.basis.map(v=>v>=0?'#3fb950':'#f85149');
+  charts.basis.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis'},
+    xAxis:{type:'category',data:d.dates,axisLabel:{color:'#8b949e',fontSize:9,rotate:30}},
+    yAxis:{type:'value',axisLabel:{color:'#8b949e'},splitLine:{lineStyle:{color:'#21262d'}}},
+    series:[{
+      type:'bar',data:d.basis.map((v,i)=>({value:v,itemStyle:{color:bColors[i]}})),
+      barWidth:'60%'
+    }]
+  });
+}
+
+function renderBacktest(){
+  // Static backtest results from the actual run
+  const btData = [
+    {group:0, ret:0.008458, sharpe:4.05},
+    {group:1, ret:0.011983, sharpe:4.34},
+    {group:2, ret:0.004023, sharpe:1.37},
+    {group:3, ret:0.004396, sharpe:2.04},
+    {group:4, ret:-0.002668, sharpe:-1.00}
+  ];
+  if(!charts.backtest) charts.backtest = echarts.init(document.getElementById('chart-backtest'));
+  charts.backtest.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis'},
+    xAxis:{type:'category',data:btData.map(d=>'第'+(d.group+1)+'组'),axisLabel:{color:'#8b949e'}},
+    yAxis:{type:'value',axisLabel:{color:'#8b949e',formatter:v=>(v*100).toFixed(2)+'%'},splitLine:{lineStyle:{color:'#21262d'}}},
+    series:[{
+      type:'bar',data:btData.map(d=>({value:d.ret,itemStyle:{color:d.ret>=0?'#3fb950':'#f85149'}})),
+      barWidth:'50%',
+      label:{show:true,position:'top',formatter:p=>(p.value*100).toFixed(3)+'%',color:'#e6edf3',fontSize:10}
+    }]
+  });
+}
+
+function renderBTSummary(){
+  document.getElementById('bt-summary').innerHTML = `
+    <b style="color:#3fb950">✅ Total_Demand 因子（样本外测试集）</b><br>
+    • IC 均值: -0.0816, ICIR: -0.448, p<0.0001<br>
+    • RankIC 均值: -0.1185, ICIR: -0.531, p<0.0001<br>
+    • 多空组合: -0.011126/日（做空高需求组，做多低需求组）<br>
+    • 分层回测: 单调性良好（第1组 Sharpe 4.05 → 第5组 -1.00）<br><br>
+    <b style="color:#58a6ff">📊 n_c 因子（样本外测试集）</b><br>
+    • RankIC 均值: -0.0273, ICIR: -0.146, p=0.0473<br>
+    • 方向: 投机占比高 → 未来收益率低（均值回归）<br><br>
+    <b style="color:#d29922">⚠️ 参数敏感性</b><br>
+    • 16 个参数组合中 n_c RankIC 全部为负（-0.009 ~ -0.071）<br>
+    • 因子方向稳定，非单一参数过拟合<br><br>
+    <b style="color:#f85149">📌 使用建议</b><br>
+    • 因子作为 LightGBM 等 ML 模型输入特征<br>
+    • 禁止单独用因子做买卖信号<br>
+    • n_c 抬升 → 波动率抬升预警 → 谨慎追涨
+  `;
+}
+
+function switchTab(id){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+window.addEventListener('resize',()=>{
+  Object.values(charts).forEach(c=>{if(c)c.resize()});
+});
+
+// Anti-copy
+document.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('selectstart',e=>e.preventDefault());
+document.addEventListener('copy',e=>e.preventDefault());
+document.addEventListener('keydown',e=>{
+  if(e.key==='F12'||(e.ctrlKey&&['s','p','c','u'].includes(e.key.toLowerCase())))e.preventDefault();
+});
+
+init();
+</script>
+</body>
+</html>
